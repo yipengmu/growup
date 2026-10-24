@@ -61,7 +61,8 @@ test('portrait preview fits the available height and stays inside its column', (
   for (const [height, width] of [[310,480],[700,700],[380,180]]) {
     const previewWidth = portraitPreviewWidth(height, width);
     assert.ok(previewWidth <= width - 24);
-    const videoHeight = (previewWidth - 20) * 16 / 9;
-    assert.ok(videoHeight + 108 <= height + 1e-9);
+    const videoHeight = (previewWidth - 2) * 16 / 9;
+    assert.ok(videoHeight + 26 <= height + 1e-9);
+    if (width > height) assert.ok(videoHeight >= height - 27);
   }
 });

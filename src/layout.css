@@ -13,23 +13,23 @@ h1, .intro h1 { font-size: 24px; margin: 3px 0 7px; line-height: 1.4; }
 .stage-top .location { margin-right: auto; white-space: nowrap; }
 .view-toggle { white-space: nowrap; flex-shrink: 0; }
 #scene { flex: 1; min-width: 0; min-height: 0; height: auto; display: grid; grid-template-columns: minmax(0, 1fr); position: relative; }
-#scene.camera-active { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+#scene.camera-active { grid-template-columns: minmax(0, .46fr) minmax(0, .54fr); }
 .render-viewport { grid-column: 1; grid-row: 1; position: relative; min-width: 0; min-height: 0; width: 100%; height: 100%; overflow: hidden; }
 #scene .render-viewport > canvas { display: block; width: 100%; height: 100%; }
 .scene-caption { top: 10px; left: 18px; max-width: 45%; z-index: 2; }
 .scene-caption > span { font-size: 8px; }
 .scene-caption strong { font-size: 14px; margin-top: 6px; }
 .orbit-label { display: none; }
-.camera-preview { grid-column: 2; grid-row: 1; align-self: center; justify-self: center; position: relative; inset: auto; transform: none; width: auto; max-width: calc(100% - 24px); min-width: 0; min-height: 0; margin: 12px; padding: 10px; display: flex; flex-direction: column; z-index: 3; background: #25373bed; border: 1px solid #8ed9c6; border-radius: 13px; box-shadow: 0 7px 25px #28384720; }
-.preview-header { flex: 0 0 24px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #e7fff5; gap: 8px; }
+.camera-preview { grid-column: 2; grid-row: 1; align-self: center; justify-self: center; position: relative; inset: auto; transform: none; width: auto; max-width: calc(100% - 24px); min-width: 0; min-height: 0; margin: 12px; padding: 0; display: flex; flex-direction: column; overflow: hidden; z-index: 3; background: #25373bed; border: 1px solid #8ed9c6; border-radius: 13px; box-shadow: 0 7px 25px #28384720; }
+.preview-header { position: absolute; top: 0; left: 0; right: 0; z-index: 2; padding: 12px 10px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #e7fff5; gap: 8px; background: linear-gradient(#16272bc9, #16272b00); }
 .preview-header strong { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .preview-header .live-dot { background: #71ffd1; box-shadow: 0 0 7px #71ffd1; }
 .preview-header button { color: #d1ede3; font-size: 20px; padding: 0 4px; }
-.video-wrap { flex: 0 0 auto; width: 100%; min-height: 0; aspect-ratio: 9 / 16; margin: 5px 0 0; border-radius: 7px; background: #16272b; position: relative; overflow: hidden; }
-.video-wrap video, .video-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; transform: scaleX(-1); }
+.video-wrap { flex: 0 0 auto; width: 100%; min-height: 0; aspect-ratio: 9 / 16; margin: 0; border-radius: 0; background: #16272b; position: relative; overflow: hidden; }
+.video-wrap video, .video-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; transform: scaleX(-1) scale(var(--camera-zoom, 1)); }
 .video-wrap video { opacity: .85; }
 .video-wrap canvas { pointer-events: none; }
-.camera-preview > p { flex: 0 0 28px; height: 28px; overflow: hidden; color: #a7d8c9; font-size: 10px; line-height: 1.4; margin: 7px 3px 0; }
+.camera-preview > p { position: absolute; bottom: 0; left: 0; right: 0; z-index: 2; padding: 20px 10px 12px; overflow: hidden; color: #c8f7e7; font-size: 10px; line-height: 1.5; margin: 0; background: linear-gradient(#16272b00, #16272be6); pointer-events: none; }
 .stage-bottom { flex: 0 0 auto; min-height: 33px; height: auto; padding: 6px 16px; gap: 12px; }
 .stage-bottom > span:nth-child(2) { display: none; }
 .stage-bottom .text-button { display: inline-block; white-space: nowrap; }
@@ -127,11 +127,11 @@ footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
   .settings-button { font-size: 9px; padding: 6px; }
   .stage-top .location { font-size: 9px; gap: 4px; }
   .view-toggle { font-size: 9px; padding: 5px; gap: 3px; }
-  #scene.camera-active { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .camera-preview { margin: 6px 6px 6px 0; padding: 6px; }
-  .preview-header { font-size: 9px; flex-basis: 20px; }
+  #scene.camera-active { grid-template-columns: minmax(0, .46fr) minmax(0, .54fr); }
+  .camera-preview { margin: 12px; padding: 0; }
+  .preview-header { font-size: 9px; padding: 8px 6px 15px; }
   .preview-header button { font-size: 17px; }
-  .camera-preview > p { font-size: 8px; margin: 4px 1px 0; }
+  .camera-preview > p { font-size: 8px; margin: 0; padding: 16px 6px 8px; }
   .scene-caption { max-width: 46%; left: 9px; top: 8px; }
   .scene-caption strong { font-size: 10px; line-height: 1.6; }
   .scene-caption > span { font-size: 6px; letter-spacing: 1px; }
@@ -159,4 +159,123 @@ footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
   .settings-content .career-card small { display: none; }
   .settings-content .count { margin-left: auto; }
   .settings-content .career-panel, .settings-content .identity-panel, .settings-content .mission-panel { padding: 12px; }
+}
+
+.is-interacting .intro,
+.is-interacting .motion-bar,
+.is-interacting .camera-bar,
+.is-interacting footer {
+  display: none;
+}
+
+.is-interacting main {
+  padding-top: 8px;
+  padding-bottom: 12px;
+}
+
+.is-interacting .stage-top {
+  min-height: 39px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.camera-preview:not(.portrait-view) {
+  align-self: stretch;
+  justify-self: stretch;
+  max-width: none;
+  margin: 8px;
+}
+
+.camera-preview:not(.portrait-view) .video-wrap {
+  flex: 1;
+  aspect-ratio: auto;
+}
+
+.camera-preview:not(.portrait-view) .video-wrap video,
+.camera-preview:not(.portrait-view) .video-wrap canvas {
+  object-fit: contain;
+}
+
+.camera-view-tools {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 44px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #80ac9c45;
+  border-radius: 9px;
+  background: #192e32db;
+  color: #d1efe3;
+  font-size: 10px;
+}
+
+.camera-fit-options { display: flex; gap: 3px; }
+.camera-fit-options button { border: 1px solid transparent; padding: 5px 7px; border-radius: 5px; background: transparent; color: #a6c4bc; font-size: 10px; white-space: nowrap; }
+.camera-fit-options button[aria-pressed="true"] { background: #477768; border-color: #80c9b3; color: #f0fff8; }
+.camera-view-tools label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.camera-view-tools input { width: 70px; accent-color: #8ed9bc; margin: 0; }
+.camera-view-tools output { min-width: 32px; font-variant-numeric: tabular-nums; }
+.camera-capture-status { flex-basis: 100%; color: #bad6cb; font-size: 9px; line-height: 1.5; }
+.portrait-view .camera-view-tools { left: 5px; right: 5px; padding: 5px; font-size: 8px; }
+.portrait-view .camera-fit-options button { font-size: 8px; padding: 4px; }
+.portrait-view .camera-view-tools input { width: 45px; }
+.quick-career { display: flex; align-items: center; gap: 6px; color: #8a789f; font-size: 10px; white-space: nowrap; }
+.quick-career select { min-width: 90px; max-width: 135px; padding: 6px 9px; border: 1px solid #cec3dd; border-radius: 7px; background: #fffafc; color: #796389; font: inherit; }
+.live-face-button { border: 1px solid #d2c4e2; background: #fffcff; color: #8a6aa5; border-radius: 7px; padding: 7px 10px; white-space: nowrap; font-size: 10px; }
+.live-face-button[aria-pressed="true"] { color: #347566; background: #e9f7f0; border-color: #97c4b2; }
+.stage-top { flex-wrap: wrap; }
+@media(max-width:600px) {
+  .camera-view-tools { left: 5px; right: 5px; padding: 5px; font-size: 8px; }
+  .camera-fit-options button { padding: 4px; font-size: 8px; }
+  .camera-view-tools input { width: 45px; }
+  .quick-career { font-size: 9px; }
+  .quick-career select { min-width: 70px; padding: 5px; }
+  .live-face-button { font-size: 9px; padding: 6px; }
+}
+
+/* Keep the stage focused; secondary controls live in the settings dialog. */
+main > .intro, main > footer, .header .course-label { display: none; }
+main { padding-bottom: 12px; }
+.stage-top .settings-button { margin-left: auto; }
+.stage-bottom { justify-content: space-between; flex-wrap: wrap; }
+#live-task { font-size: 10px; line-height: 1.5; }
+.settings-content > .advanced-settings { padding: 16px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; min-width: 0; }
+.settings-content .advanced-settings h2 { margin: 0; }
+.settings-content .advanced-settings .helper { margin: 0; }
+.settings-content .quick-career { margin-top: 12px; }
+.settings-content .live-face-button { margin-top: 14px; width: 100%; font-size: 12px; padding: 10px; }
+.settings-content .view-toggle { align-self: flex-start; }
+.settings-content .zoom-control { margin: 0; justify-content: space-between; font-size: 11px; white-space: normal; }
+.settings-content .zoom-control input { flex: 1; min-width: 50px; max-width: 160px; }
+.settings-content .camera-view-tools { position: static; margin: 0; padding: 12px; color: #665878; background: #f6f1fa; border-color: #e0d6eb; }
+.settings-content .camera-fit-options { flex-wrap: wrap; }
+.settings-content .camera-fit-options button { color: #796389; }
+.settings-content .camera-fit-options button[aria-pressed="true"] { color: #fff; }
+.settings-content .camera-capture-status { color: #897894; }
+.settings-content #tracking-detail { font-size: 10px; color: #897894; line-height: 1.7; }
+.settings-content .motion-bar { display: flex; padding: 0; justify-content: flex-start; background: transparent; }
+.settings-content .motion-bar > span { display: none; }
+.settings-content #teacher { align-self: flex-start; padding: 6px 0; }
+.settings-content .fruit-settings label { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  main { padding-bottom: 8px; }
+  .settings-content .advanced-settings { padding: 12px; }
+  .settings-content .view-toggle { font-size: 11px; padding: 8px; }
+  .settings-content .camera-view-tools { font-size: 11px; }
+  .settings-content .camera-fit-options button { font-size: 10px; padding: 6px; }
+}
+
+/* Extend each career's scenery palette through the stage frame. */
+.stage-panel { background: var(--stage-background, #e8e3f3); transition: background-color .35s; }
+.stage-panel .location, .stage-panel .scene-caption > span,
+.stage-panel .scene-caption strong { color: var(--stage-ink, #77698f); }
+.scene-caption { padding: 8px 11px; border-radius: 10px; background: #fffdf5c9; max-width: calc(100% - 36px); }
+@media (prefers-reduced-motion: reduce) {
+  .stage-panel { transition: none; }
 }

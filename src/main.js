@@ -5,11 +5,17 @@ import './style.css';
 import './layout.css';
 import { solvePoseRig, visible } from './pose-rig.js';
 import { fitDistance, portraitPreviewWidth } from './viewport.js';
+import { faceCrop } from './face-crop.js';
+import { cameraCaptureConstraints, useWidestCamera } from './camera-capture.js';
+import { createFruitStage } from './fruit-stage.js';
+import { createCareerEnvironment } from './career-environment.js';
+let fruitStage;
 
 const careers = [
   { id: 'space', icon: '✦', name: '宇航员', en: 'SPACE EXPLORER', color: '#a69bdf', suit: '#ececf8', accent: '#8e82ce', background: '#e8e3f3', place: '月球探索站', task: '展开双臂，启动探索飞船', hint: '像小飞机一样，慢慢张开两只手臂', result: '飞船收到你的信号啦！', badge: '勇敢探索家', category: '探索' },
   { id: 'science', icon: '⚗', name: '科学家', en: 'LITTLE SCIENTIST', color: '#86b7a3', suit: '#f2f5ee', accent: '#66a68c', background: '#dfede5', place: '奇妙实验室', task: '展开双臂，唤醒实验装置', hint: '张开双臂，为奇妙实验注入能量', result: '新的发现，来自你的好奇心！', badge: '好奇发现家', category: '探索' },
   { id: 'fire', icon: '♨', name: '消防员', en: 'BRAVE FIREFIGHTER', color: '#db956d', suit: '#d97947', accent: '#f3d374', background: '#f2e4d9', place: '城市守护站', task: '展开双臂，点亮救援信号', hint: '稳稳站好，张开双臂发出信号', result: '救援小队已经准备出发！', badge: '勇敢守护者', category: '守护' },
+  { id: 'soldier', icon: '★', name: '解放军军人', en: 'PLA SOLDIER', color: '#82956c', suit: '#75865b', accent: '#d8bd72', background: '#e5ebdd', place: '和平守护营', task: '展开双臂，传递平安信号', hint: '稳稳站好，慢慢张开双臂，和伙伴一起守护平安', result: '平安信号收到啦，谢谢你守护大家！', badge: '和平小卫士', category: '守护' },
   { id: 'doctor', icon: '✚', name: '医生', en: 'KIND DOCTOR', color: '#81b9c3', suit: '#edf5f5', accent: '#65a8b7', background: '#e0edf0', place: '暖心诊疗室', task: '展开双臂，传递暖心能量', hint: '张开双臂，给需要帮助的人一点力量', result: '谢谢你，让世界多一点温暖！', badge: '暖心守护者', category: '守护' },
   { id: 'engineer', icon: '⚙', name: '工程师', en: 'FUTURE BUILDER', color: '#d3b26a', suit: '#7f9cab', accent: '#edc970', background: '#eee9da', place: '未来建造工坊', task: '展开双臂，启动建造机器人', hint: '张开双臂，让机器人收到开工信号', result: '一座新的梦想之桥，即将建成！', badge: '未来建造家', category: '创造' },
   { id: 'artist', icon: '✿', name: '画家', en: 'DREAM ARTIST', color: '#d69caf', suit: '#e9c1ce', accent: '#9c83bd', background: '#f1e2ea', place: '彩虹画室', task: '展开双臂，为画室点亮色彩', hint: '把双手展开，想象你最喜欢的颜色', result: '你的想象，让世界有了新颜色！', badge: '色彩梦想家', category: '创造' },
@@ -17,13 +23,13 @@ const careers = [
   { id: 'garden', icon: '❀', name: '园艺师', en: 'NATURE KEEPER', color: '#9aac74', suit: '#a7b68a', accent: '#e7ce94', background: '#e7ecdc', place: '生长小花园', task: '展开双臂，让小花迎接阳光', hint: '像一棵小树一样，舒展你的枝条', result: '在你的照顾下，小花开啦！', badge: '自然好朋友', category: '探索' },
 ];
 
-const state = { career: careers[0], filter: '全部', camera: false, tracking: false, skeleton: true, demo: true, motion: 'wave', progress: 0, complete: false, paused: false, faceUrl: null };
+const state = { career: careers[0], filter: '全部', camera: false, tracking: false, skeleton: true, demo: true, motion: 'wave', progress: 0, complete: false, paused: false, faceUrl: null, cameraView: 'wide', liveFaceEnabled: true };
 const icons = { camera: '<svg viewBox="0 0 24 24"><path d="m8 5 1-2h6l1 2h4v15H4V5z"/><circle cx="12" cy="12" r="4"/></svg>', upload: '<svg viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg>' };
 document.querySelector('#app').innerHTML = `
   <header class="header"><a class="brand" href="/" aria-label="未来的我首页"><span class="brand-icon">✳</span><div>未来的我<span class="brand-sub">FUTURE ME LAB</span></div></a><div class="course-label">科技赋能师 <span>/</span> AI 故事创想</div><button class="quiet" id="teacher">老师小贴士 <span>↗</span></button></header>
-  <main><div class="intro"><div><div class="eyebrow">A LITTLE IMAGINATION, A BIG FUTURE</div><h1>长大后的我，<span>会是什么样子？</span></h1><p>选一个梦想职业，让未来的自己，跟着你一起动起来。</p></div><div class="session-tag"><span class="live-dot"></span> 职业体验馆 <span class="tag-version">风格 Demo 01</span></div></div>
+  <main><div class="intro"><div><div class="eyebrow">A LITTLE IMAGINATION, A BIG FUTURE</div><h1>长大后的我，<span>会是什么样子？</span></h1><p>开启摄像头，让未来的自己跟着你一起动起来。</p></div><div class="session-tag"><span class="live-dot"></span> 职业体验馆 <span class="tag-version">风格 Demo 01</span></div></div>
   <div class="workspace">
-    <aside class="career-panel panel"><div class="panel-title"><span class="step">01</span><h2>选择我的梦想</h2><span class="count">8 个职业</span></div><div class="filters" role="group" aria-label="职业分类">${['全部','探索','守护','创造'].map((label) => `<button class="filter ${label === '全部' ? 'active' : ''}" data-filter="${label}">${label}</button>`).join('')}</div><div id="career-list"></div><div class="template-note"><span>✧</span><div><strong>每一个梦想，都值得被看见</strong><p>预制职业模板 · 更多可能正在生长</p></div></div></aside>
+    <aside class="career-panel panel"><div class="panel-title"><span class="step">01</span><h2>选择我的梦想</h2><span class="count">${careers.length} 个职业</span></div><div class="filters" role="group" aria-label="职业分类">${['全部','探索','守护','创造'].map((label) => `<button class="filter ${label === '全部' ? 'active' : ''}" data-filter="${label}">${label}</button>`).join('')}</div><div id="career-list"></div><div class="template-note"><span>✧</span><div><strong>每一个梦想，都值得被看见</strong><p>预制职业模板 · 更多可能正在生长</p></div></div></aside>
     <section class="stage-panel panel"><div class="stage-top"><span class="location"><span class="live-dot"></span><span id="place">月球探索站</span></span><button class="view-toggle" id="skeleton-toggle" aria-pressed="true">◎ 骨架节点 <span>开</span></button></div><div id="scene"><div class="scene-caption"><span id="career-en">SPACE EXPLORER</span><strong>你好，未来的<span id="career-name">宇航员</span>！</strong></div><div class="orbit-label">✦ 20 年后的想象</div><div class="stage-loader" id="stage-loader">正在布置梦想舞台…</div></div><div class="stage-bottom"><span class="mode-status" id="mode-status"><i></i> 演示动作 · 非实时识别</span><span>拖动旋转视角 · 滚轮缩放</span><button id="reset-view" class="text-button">视角复位 ↺</button></div><div class="motion-bar"><span>试一试</span><button class="motion active" data-motion="wave">👋 挥挥手</button><button class="motion" data-motion="stretch">🙌 展开双臂</button><button class="motion" data-motion="sway">🌿 左右摇摆</button><button id="pause" class="pause" aria-label="暂停演示动画">Ⅱ</button></div></section>
     <aside class="experience-panel"><section class="panel identity-panel"><div class="panel-title"><span class="step">02</span><h2>遇见未来的我</h2></div><div class="identity-row"><div class="face-preview" id="face-preview"></div><div><strong id="identity-title">想象中的未来形象</strong><p>卡通成人脸 × 3D 职业身体</p><span class="mini-tag" id="identity-tag">示例头像</span></div></div><button class="upload-button" id="upload">${icons.upload} 上传卡通脸部图片</button><input type="file" accept="image/png,image/jpeg,image/webp" id="face-input" hidden/><button class="text-button restore" id="restore-face" hidden>恢复示例头像</button><p class="helper">本 Demo 支持贴图预览，尚未接入照片转成人卡通脸。上传图片仅在本机使用。</p></section>
     <section class="panel mission-panel"><div class="panel-title"><span class="step">03</span><h2>我的小小任务</h2></div><div class="mission-art" id="mission-art">✦</div><span class="mission-kicker">今天，也向梦想靠近一点</span><h3 id="task">展开双臂，启动探索飞船</h3><p id="task-hint">像小飞机一样，慢慢张开两只手臂</p><div class="progress-track" role="progressbar" aria-label="任务完成进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress"></div></div><div class="progress-label"><span id="progress-status">保持动作，收集梦想能量</span><span id="progress-number">0%</span></div><div class="mission-result" id="mission-result" hidden><strong>✧ 获得「勇敢探索家」徽章</strong><p>飞船收到你的信号啦！</p></div><button class="text-button" id="restart-task">再挑战一次 ↺</button></section>
@@ -32,22 +38,37 @@ document.querySelector('#app').innerHTML = `
   <section class="camera-bar panel"><div class="camera-icon">${icons.camera}</div><div class="camera-copy"><strong id="camera-title">准备好，让角色跟着你动了吗？</strong><p id="camera-detail">开启摄像头，正面站好，尽量让双手和上半身完整入镜。</p></div><span class="privacy">♧ 视频本地处理 · 不上传</span><button class="primary" id="camera-button">${icons.camera}<span>开启摄像头体验</span><span>↗</span></button></section>
   <section class="camera-preview panel" id="camera-preview" hidden><div class="preview-header"><strong><span class="live-dot"></span> AI 观察窗</strong><button class="text-button" id="close-camera" aria-label="关闭摄像头">×</button></div><div class="video-wrap"><video id="video" autoplay muted playsinline></video><canvas id="landmarks"></canvas></div><p id="tracking-label" role="status">等待识别 · 请正面站好</p></section>
   <footer><span>想象未来，不预测未来。你可以成为很多种自己。</span><span>MADE FOR LITTLE DREAMERS <span class="footer-star">✦</span></span></footer></main>
-  <dialog id="tips"><button class="dialog-close" aria-label="关闭老师小贴士">×</button><span class="eyebrow">FOR TEACHERS</span><h2>把好奇心，交给小朋友。</h2><p>先播放演示动作，观察卡通人物；再开启摄像头，比较真人骨架和角色动作。</p><ol><li>每次一人站在画面中央，保持正面，避免快速转身。</li><li>展开双臂并保持约 3 秒，完成当前职业的演示任务。</li><li>可上传已经准备好的卡通头像；原始照片不会在本 Demo 中自动生成或变老。</li><li>八个职业共用同一套动作任务，用于评审模板风格。职业专属任务尚未制作。</li></ol><p class="helper">首次使用动作识别需联网下载 MediaPipe 模型。识别失败时可继续使用演示动作。请按园方流程取得监护人许可后使用孩子照片和摄像头。</p><button class="primary" id="tips-done">开始探索</button></dialog>
+  <dialog id="tips"><button class="dialog-close" aria-label="关闭老师小贴士">×</button><span class="eyebrow">FOR TEACHERS</span><h2>把好奇心，交给小朋友。</h2><p>先播放演示动作，观察卡通人物；再开启摄像头，比较真人骨架和角色动作。</p><ol><li>每次一人站在画面中央，保持正面，避免快速转身。</li><li>展开双臂并保持约 3 秒，完成当前职业的演示任务。</li><li>可上传已经准备好的卡通头像；原始照片不会在本 Demo 中自动生成或变老。</li><li>所有职业共用同一套动作任务，用于评审模板风格。职业专属任务尚未制作。</li></ol><p class="helper">首次使用动作识别需联网下载 MediaPipe 模型。识别失败时可继续使用演示动作。请按园方流程取得监护人许可后使用孩子照片和摄像头。</p><button class="primary" id="tips-done">开始探索</button></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>`;
 
 const container = document.querySelector('#scene');
 const settings = document.createElement('dialog');
 settings.id = 'experience-settings';
 settings.setAttribute('aria-labelledby', 'settings-title');
-settings.innerHTML = '<div class="settings-heading"><div><span class="eyebrow">TEACHER SETUP</span><h2 id="settings-title">准备我的职业体验</h2></div><button class="quiet" id="close-settings" aria-label="关闭体验设置">关闭 ×</button></div><div class="settings-content"></div><button class="primary" id="start-interaction">收起设置，开始互动 ↗</button>';
+settings.innerHTML = '<div class="settings-heading"><div><span class="eyebrow">TEACHER SETUP</span><h2 id="settings-title">体验设置</h2></div><button class="quiet" id="close-settings" aria-label="关闭体验设置">关闭 ×</button></div><div class="settings-content"></div><button class="primary" id="start-interaction">收起设置，开始互动 ↗</button>';
 document.body.appendChild(settings);
 settings.querySelector('.settings-content').append(document.querySelector('.career-panel'), document.querySelector('.experience-panel'));
 const settingsButton = document.createElement('button');
 settingsButton.className = 'settings-button';
-settingsButton.textContent = '⚙ 职业与形象设置';
+settingsButton.textContent = '⚙ 设置';
 settingsButton.setAttribute('aria-haspopup', 'dialog');
-document.querySelector('.stage-top').prepend(settingsButton);
+document.querySelector('.stage-top').append(settingsButton);
 settingsButton.addEventListener('click', () => settings.showModal());
+const quickCareer = document.createElement('label');
+quickCareer.className = 'quick-career';
+quickCareer.innerHTML = `角色职业 <select id="quick-career" aria-label="角色职业">${careers.map((career) => `<option value="${career.id}">${career.name}</option>`).join('')}</select>`;
+settings.querySelector('.career-panel .panel-title').after(quickCareer);
+document.querySelector('#quick-career').addEventListener('change', (event) => chooseCareer(event.target.value));
+const liveFaceButton = document.createElement('button');
+liveFaceButton.className = 'live-face-button';
+liveFaceButton.id = 'live-face';
+liveFaceButton.textContent = '实时换脸：开';
+liveFaceButton.setAttribute('aria-pressed', 'true');
+settings.querySelector('.identity-panel .panel-title').after(liveFaceButton);
+const liveFaceHelp = document.createElement('p');
+liveFaceHelp.className = 'helper';
+liveFaceHelp.textContent = '默认开启，启动摄像头后自动将镜头中的脸用于角色。关闭后恢复原头像；上传头像会切换为上传形象。';
+liveFaceButton.after(liveFaceHelp);
 for (const selector of ['#close-settings','#start-interaction']) document.querySelector(selector).addEventListener('click', () => settings.close());
 const interactionStatus = document.createElement('div');
 interactionStatus.className = 'interaction-status';
@@ -59,13 +80,52 @@ for (const [motion, label] of [['march','🦵 抬腿踏步'],['turn','↔ 转身
   document.querySelector('#pause').before(button);
 }
 container.appendChild(document.querySelector('#camera-preview'));
+const cameraTools = document.createElement('div');
+cameraTools.className = 'camera-view-tools';
+cameraTools.innerHTML = '<div class="camera-fit-options" role="group" aria-label="真人取景方式"><button data-camera-view="wide" aria-pressed="true">广角完整</button><button data-camera-view="portrait" aria-pressed="false">竖屏广角</button></div><label>真人缩放 <input id="camera-zoom" type="range" min="60" max="180" value="100" step="5" aria-label="真人画面缩放"/><output id="camera-zoom-value" for="camera-zoom">1.00×</output></label>';
+document.querySelector('#camera-preview').appendChild(cameraTools);
+const cameraCaptureStatus = document.createElement('span');
+cameraCaptureStatus.className = 'camera-capture-status';
+cameraCaptureStatus.setAttribute('role', 'status');
+cameraTools.appendChild(cameraCaptureStatus);
+function updateCameraFraming() {
+  const preview = document.querySelector('#camera-preview');
+  const portrait = state.cameraView === 'portrait';
+  preview.classList.toggle('portrait-view', portrait);
+  if (portrait) preview.style.width = `${portraitPreviewWidth(container.clientHeight, container.clientWidth * 0.54)}px`;
+  else preview.style.removeProperty('width');
+}
+document.querySelectorAll('[data-camera-view]').forEach((button) => button.addEventListener('click', () => {
+  state.cameraView = button.dataset.cameraView;
+  document.querySelectorAll('[data-camera-view]').forEach((option) => option.setAttribute('aria-pressed', option === button));
+  document.querySelector('#camera-zoom').value = '100';
+  document.querySelector('#camera-zoom-value').textContent = '1.00×';
+  document.querySelector('#camera-preview').style.setProperty('--camera-zoom', '1');
+  updateCameraFraming();
+}));
+document.querySelector('#camera-zoom').addEventListener('input', (event) => {
+  const zoom = Number(event.target.value) / 100;
+  document.querySelector('#camera-preview').style.setProperty('--camera-zoom', String(zoom));
+  document.querySelector('#camera-zoom-value').textContent = `${zoom.toFixed(2)}×`;
+});
 const renderViewport = document.createElement('div');
 renderViewport.className = 'render-viewport';
 container.appendChild(renderViewport);
 const zoomControl = document.createElement('label');
 zoomControl.className = 'zoom-control';
 zoomControl.innerHTML = '视野 <input id="view-zoom" type="range" min="60" max="140" value="85" step="5" aria-label="3D 角色画面缩放比例"/><output id="zoom-value" for="view-zoom">85%</output>';
-document.querySelector('.stage-bottom').appendChild(zoomControl);
+const displaySettings = document.createElement('section');
+displaySettings.className = 'panel advanced-settings';
+displaySettings.innerHTML = '<h2>画面与识别</h2><p class="helper">调整角色视野、真人取景和骨架显示。</p>';
+displaySettings.append(document.querySelector('#skeleton-toggle'), zoomControl, document.querySelector('#reset-view'), cameraTools, document.querySelector('#tracking-detail'));
+const demoSettings = document.createElement('section');
+demoSettings.className = 'panel advanced-settings demo-settings';
+demoSettings.innerHTML = '<h2>演示与帮助</h2><p class="helper">未开启摄像头时，可预览角色动作。</p>';
+demoSettings.append(document.querySelector('.motion-bar'), document.querySelector('#teacher'));
+settings.querySelector('.settings-content').append(displaySettings, demoSettings);
+document.querySelector('.stage-bottom').append(document.querySelector('#live-task'));
+interactionStatus.remove();
+
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
@@ -206,6 +266,7 @@ const faceMesh = mesh(new THREE.PlaneGeometry(1.06, 1.12), faceMaterial, head, [
 faceMesh.castShadow = false;
 const accessories = new THREE.Group();
 head.add(accessories);
+const capBadgeMaterial = new THREE.MeshStandardMaterial({ color: '#d94e43', roughness: 0.65, side: THREE.DoubleSide });
 function updateAccessories() {
   while (accessories.children.length) {
     const child = accessories.children[0];
@@ -213,10 +274,24 @@ function updateAccessories() {
     accessories.remove(child);
   }
   backpack.visible = state.career.id === 'space';
-  hair.visible = !['fire','engineer','chef'].includes(state.career.id);
+  hair.visible = !['fire','engineer','chef','soldier'].includes(state.career.id);
   if (['fire','engineer'].includes(state.career.id)) {
     mesh(new THREE.SphereGeometry(0.61, 32, 20, 0, Math.PI * 2, 0, Math.PI / 2), accent, accessories, [0, 0.32, 0]);
     mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.06, 40), accent, accessories, [0, 0.32, 0]);
+  }
+  if (state.career.id === 'soldier') {
+    mesh(new THREE.CylinderGeometry(0.55, 0.56, 0.26, 40), suit, accessories, [0, 0.48, 0]);
+    const visor = mesh(new THREE.SphereGeometry(0.49, 24, 12), suit, accessories, [0, 0.36, 0.35]);
+    visor.scale.set(1.1, 0.065, 0.85);
+    const star = new THREE.Shape();
+    for (let i = 0; i < 10; i++) {
+      const angle = Math.PI / 2 + i * Math.PI / 5;
+      const radius = i % 2 === 0 ? 0.09 : 0.04;
+      const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius;
+      if (i === 0) star.moveTo(x, y); else star.lineTo(x, y);
+    }
+    star.closePath();
+    mesh(new THREE.ShapeGeometry(star), capBadgeMaterial, accessories, [0, 0.49, 0.565]);
   }
   if (state.career.id === 'chef') {
     mesh(new THREE.CylinderGeometry(0.43, 0.48, 0.28, 32), white, accessories, [0, 0.56, 0]);
@@ -238,19 +313,64 @@ function updateFacePreview() {
   const picture = new Image(); picture.src = faceCanvas.toDataURL(); picture.alt = '当前卡通脸部贴图'; preview.appendChild(picture);
 }
 updateFacePreview();
+let liveFace = false;
+let lastFaceFrame = 0;
+let lastFacePreview = 0;
+let savedFaceInfo = null;
+const savedFace = document.createElement('canvas');
+savedFace.width = 512; savedFace.height = 512;
+function stopLiveFace(restore = true) {
+  if (!liveFace) return;
+  liveFace = false;
+  if (restore && savedFaceInfo) {
+    faceContext.clearRect(0,0,512,512);
+    faceContext.drawImage(savedFace,0,0);
+    faceTexture.needsUpdate = true; updateFacePreview();
+    document.querySelector('#identity-title').textContent = savedFaceInfo.title;
+    document.querySelector('#identity-tag').textContent = savedFaceInfo.tag;
+  }
+  syncLiveFaceButton();
+}
+function syncLiveFaceButton() {
+  liveFaceButton.textContent = `实时换脸：${state.liveFaceEnabled ? '开' : '关'}`;
+  liveFaceButton.setAttribute('aria-pressed', String(state.liveFaceEnabled));
+}
+function startLiveFace() {
+  if (liveFace || !state.camera || !state.liveFaceEnabled) return;
+  savedFace.getContext('2d').clearRect(0,0,512,512);
+  savedFace.getContext('2d').drawImage(faceCanvas,0,0);
+  savedFaceInfo = { title: document.querySelector('#identity-title').textContent, tag: document.querySelector('#identity-tag').textContent };
+  liveFace = true;
+  lastFaceFrame = 0;
+  syncLiveFaceButton();
+  document.querySelector('#identity-title').textContent = '镜头中的我 · 实时贴图';
+  document.querySelector('#identity-tag').textContent = '本机实时换脸 · 未进行年龄生成';
+}
+liveFaceButton.addEventListener('click', () => {
+  state.liveFaceEnabled = !state.liveFaceEnabled;
+  if (state.liveFaceEnabled) startLiveFace();
+  else stopLiveFace();
+  syncLiveFaceButton();
+});
+function updateLiveFace(points, now) {
+  if (!liveFace || now - lastFaceFrame < 140) return;
+  lastFaceFrame = now;
+  const crop = faceCrop(points,video.videoWidth,video.videoHeight);
+  if (!crop) {
+    return;
+  }
+  faceContext.clearRect(0,0,512,512);
+  faceContext.save();
+  faceContext.beginPath(); faceContext.ellipse(256,256,218,240,0,0,Math.PI * 2); faceContext.clip();
+  faceContext.translate(512,0); faceContext.scale(-1,1);
+  faceContext.drawImage(video,crop.x,crop.y,crop.width,crop.height,22,0,468,512);
+  faceContext.restore(); faceTexture.needsUpdate = true;
+  if (now - lastFacePreview > 800) { updateFacePreview(); lastFacePreview = now; }
+}
 
-const setPieces = new THREE.Group(); scene.add(setPieces);
-for (let index = 0; index < 6; index++) {
-  const angle = index / 6 * Math.PI * 2;
-  const rock = mesh(new THREE.DodecahedronGeometry(0.14 + index * 0.015, 0), new THREE.MeshStandardMaterial({ color: '#d5cfe2', roughness: 1 }), setPieces, [Math.cos(angle) * 2.2, -0.04, Math.sin(angle) * 1.3]);
-  rock.scale.y = 0.65;
-}
-const stars = new THREE.Group(); scene.add(stars);
-for (let index = 0; index < 22; index++) {
-  const angle = index * 2.4;
-  const spark = mesh(new THREE.OctahedronGeometry(index % 4 === 0 ? 0.055 : 0.025), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.65 }), stars, [Math.cos(angle) * (1.6 + index % 3 * 0.3), 0.7 + index % 6 * 0.5, -0.7 - index % 3]);
-  spark.userData.baseY = spark.position.y;
-}
+const environment = createCareerEnvironment(scene);
+environment.setCareer(state.career.id);
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const skeletonGroup = new THREE.Group(); character.add(skeletonGroup);
 const skeletonMaterial = new THREE.MeshBasicMaterial({ color: '#c3f4e6', depthTest: false, transparent: true, opacity: 0.82 });
 const skeletonAnchors = [head, limbs.left.shoulder, limbs.left.elbow, limbs.left.wrist, limbs.right.shoulder, limbs.right.elbow, limbs.right.wrist, limbs.left.hip, limbs.left.knee, limbs.left.ankle, limbs.right.hip, limbs.right.knee, limbs.right.ankle];
@@ -282,8 +402,7 @@ new ResizeObserver(() => {
   camera.aspect = width / height;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(width, height);
-  const previewWidth = portraitPreviewWidth(container.clientHeight, container.clientWidth / 2);
-  document.querySelector('#camera-preview').style.width = `${previewWidth}px`;
+  updateCameraFraming();
   fitView();
 }).observe(renderViewport);
 document.querySelector('#stage-loader').hidden = true;
@@ -294,8 +413,10 @@ function renderCareers() {
 }
 function resetTask() { state.progress = 0; state.complete = false; document.querySelector('#mission-result').hidden = true; }
 function chooseCareer(id) {
+  fruitStage?.invalidateInput();
   state.career = careers.find((career) => career.id === id);
   const career = state.career;
+  document.querySelector('#quick-career').value = career.id;
   suit.color.set(career.suit); accent.color.set(career.accent); scene.background.set(career.background); scene.fog.color.set(career.background); floor.material.color.set(career.background);
   document.querySelector('#place').textContent = career.place;
   document.querySelector('#career-name').textContent = career.name;
@@ -304,8 +425,17 @@ function chooseCareer(id) {
   document.querySelector('#task-hint').textContent = career.hint;
   document.querySelector('#mission-art').textContent = career.icon;
   document.documentElement.style.setProperty('--accent', career.accent);
+  environment.setCareer(career.id);
+  updateStageTheme(career);
   updateAccessories(); resetTask(); renderCareers();
 }
+function updateStageTheme(career) {
+  const panel = document.querySelector('.stage-panel');
+  panel.style.setProperty('--stage-background', career.background);
+  panel.style.setProperty('--stage-ink', new THREE.Color(career.color).multiplyScalar(0.57).getStyle());
+  panel.dataset.career = career.id;
+}
+updateStageTheme(state.career);
 renderCareers();
 document.querySelectorAll('[data-filter]').forEach((button) => button.addEventListener('click', () => {
   state.filter = button.dataset.filter;
@@ -346,6 +476,7 @@ document.querySelector('#upload').addEventListener('click', () => document.query
 document.querySelector('#face-input').addEventListener('change', async (event) => {
   const file = event.target.files[0]; if (!file) return;
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) { toast('请选择 10MB 以内的 PNG、JPG 或 WebP 图片。'); event.target.value = ''; return; }
+  state.liveFaceEnabled = false; stopLiveFace(); syncLiveFaceButton();
   const url = URL.createObjectURL(file);
   try {
     const picture = new Image(); picture.src = url; await picture.decode();
@@ -359,13 +490,14 @@ document.querySelector('#face-input').addEventListener('change', async (event) =
   } catch { toast('这张图片无法读取，请换一张试试。'); }
   finally { URL.revokeObjectURL(url); event.target.value = ''; }
 });
-document.querySelector('#restore-face').addEventListener('click', () => { drawDefaultFace(); faceTexture.needsUpdate = true; updateFacePreview(); state.faceUrl = null; document.querySelector('#identity-title').textContent = '想象中的未来形象'; document.querySelector('#identity-tag').textContent = '示例头像'; document.querySelector('#restore-face').hidden = true; });
+document.querySelector('#restore-face').addEventListener('click', () => { state.liveFaceEnabled = false; stopLiveFace(false); syncLiveFaceButton(); drawDefaultFace(); faceTexture.needsUpdate = true; updateFacePreview(); state.faceUrl = null; document.querySelector('#identity-title').textContent = '想象中的未来形象'; document.querySelector('#identity-tag').textContent = '示例头像'; document.querySelector('#restore-face').hidden = true; });
 
 let detector = null;
 let stream = null;
 let cameraSession = 0;
 let lastVideoTime = -1;
 let lastSeen = 0;
+let poseAt = 0;
 let pose = null;
 let worldPose = null;
 let startingCamera = false;
@@ -377,11 +509,14 @@ function updateMode() {
   document.querySelectorAll('.motion, #pause').forEach((button) => { button.disabled = state.camera; });
 }
 function stopCamera() {
+  fruitStage?.invalidateInput();
+  stopLiveFace();
   cameraSession++;
   stream?.getTracks().forEach((track) => track.stop()); stream = null; video.srcObject = null;
   state.camera = false; state.tracking = false; state.demo = true; pose = null; worldPose = null; startingCamera = false;
   document.querySelector('#camera-preview').hidden = true;
   container.classList.remove('camera-active');
+  document.querySelector('#app').classList.remove('is-interacting');
   const button = document.querySelector('#camera-button'); button.disabled = false; button.querySelector('span').textContent = '开启摄像头体验';
   document.querySelector('#camera-title').textContent = '准备好，让角色跟着你动了吗？';
   document.querySelector('#camera-detail').textContent = '开启摄像头，正面站好，尽量让双手和上半身完整入镜。'; updateMode();
@@ -393,20 +528,26 @@ async function startCamera() {
   const button = document.querySelector('#camera-button'); button.disabled = true; button.querySelector('span').textContent = '正在准备识别…';
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('当前浏览器不支持摄像头，请使用本机 localhost 或 HTTPS 下的 Chrome / Edge。');
-    const nextStream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 }, facingMode: 'user' }, audio: false });
+    const nextStream = await navigator.mediaDevices.getUserMedia(cameraCaptureConstraints());
     if (session !== cameraSession) { nextStream.getTracks().forEach((track) => track.stop()); return; }
-    stream = nextStream; video.srcObject = stream; await video.play();
+    stream = nextStream;
+    stream.getVideoTracks().forEach(track => track.addEventListener('ended', () => { if (session === cameraSession) stopCamera(); }));
+    cameraCaptureStatus.textContent = await useWidestCamera(stream.getVideoTracks()[0]);
+    if (session !== cameraSession) return;
+    video.srcObject = stream; await video.play();
     if (!detector) {
       const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm');
       detector = await PoseLandmarker.createFromOptions(vision, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task', delegate: 'CPU' }, runningMode: 'VIDEO', numPoses: 1 });
     }
     if (session !== cameraSession) return;
     state.camera = true; state.demo = false; state.paused = false; state.tracking = false; lastSeen = 0; lastVideoTime = -1; resetTask();
+    startLiveFace();
     document.querySelector('#camera-preview').hidden = false;
     container.classList.add('camera-active');
+    document.querySelector('#app').classList.add('is-interacting');
     button.querySelector('span').textContent = '关闭摄像头';
     document.querySelector('#camera-title').textContent = 'AI 正在寻找身体的小节点';
-    document.querySelector('#camera-detail').textContent = '竖屏取景 9:16 · 请后退让全身进入竖框，横向摄像头画面会居中裁切。';
+    document.querySelector('#camera-detail').textContent = '优先使用设备最低镜头变焦与原生比例；完整显示采集画面，也可切换竖屏广角或调整真人缩放。';
     document.querySelector('#pause').textContent = 'Ⅱ'; updateMode();
   } catch (error) {
     if (session !== cameraSession) return;
@@ -429,7 +570,9 @@ function readPose(now) {
   lastVideoTime = video.currentTime;
   try {
     const result = detector.detectForVideo(video, now);
+    poseAt = now;
     const landmarks = result.landmarks[0];
+    updateLiveFace(landmarks,now);
     landmarkCanvas.width = video.videoWidth; landmarkCanvas.height = video.videoHeight;
     landmarkContext.clearRect(0,0,landmarkCanvas.width,landmarkCanvas.height);
     if (!landmarks) { pose = null; worldPose = null; return; }
@@ -462,6 +605,18 @@ function readPose(now) {
     }
   } catch (error) { stopCamera(); toast('识别暂时中断，已恢复演示模式。'); console.warn(error); }
 }
+fruitStage = createFruitStage({ viewport: renderViewport, container, renderer, camera, controls, limbs, state,
+  getPose: () => ({ pose, time: poseAt }), resetView,
+  resetFace: () => {
+    stopLiveFace(false); savedFace.getContext('2d').clearRect(0,0,512,512); savedFaceInfo = null;
+    drawDefaultFace(); faceTexture.needsUpdate = true; updateFacePreview();
+    pose = null; worldPose = null; lastSeen = 0; state.faceUrl = null;
+    document.querySelector('#identity-title').textContent = '想象中的未来形象';
+    document.querySelector('#identity-tag').textContent = '示例头像';
+    document.querySelector('#restore-face').hidden = true;
+    startLiveFace();
+  },
+});
 const clock = new THREE.Clock();
 let elapsed = 0;
 let inferenceAt = 0;
@@ -537,8 +692,8 @@ function animate() {
   document.querySelector('#progress-number').textContent = `${percent}%`;
   document.querySelector('#live-task').textContent = state.complete ? `✧ ${state.career.badge} · ${state.demo ? '演示完成' : '任务完成'}` : `${state.career.task} · ${percent}%`;
   document.querySelector('#progress-status').textContent = state.complete ? (state.demo ? '演示任务完成 · 试试摄像头吧' : '太棒了！你完成了任务') : (state.demo ? '演示中 · 展开双臂可预览任务' : '保持动作，收集梦想能量');
-  stars.children.forEach((spark,index) => { spark.position.y = spark.userData.baseY + Math.sin(elapsed + index) * 0.08; spark.rotation.y = elapsed * 0.3; spark.scale.setScalar(state.complete ? 1.5 + Math.sin(elapsed * 3 + index) * 0.3 : 1); });
-  controls.update(); scene.updateMatrixWorld(true); updateSkeleton(); renderer.render(scene,camera);
+  environment.update(elapsed, reducedMotion.matches || container.classList.contains('fruit-active'));
+  controls.update(); scene.updateMatrixWorld(true); updateSkeleton(); renderer.render(scene,camera); fruitStage.frame(now);
 }
 renderer.setAnimationLoop(animate);
 window.addEventListener('pagehide', () => { stopCamera(); detector?.close(); });

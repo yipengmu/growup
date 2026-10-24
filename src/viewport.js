@@ -5,6 +5,6 @@ export function fitDistance(aspect, fieldOfView = 34) {
 }
 
 export function portraitPreviewWidth(stageHeight, columnWidth) {
-  const contentHeight = Math.max(1, stageHeight - 108);
-  return Math.max(1, Math.min(columnWidth - 24, contentHeight * 9 / 16 + 20));
+  const contentHeight = Math.max(1, stageHeight - 26);
+  return Math.max(1, Math.min(columnWidth - 24, contentHeight * 9 / 16 + 2));
 }
