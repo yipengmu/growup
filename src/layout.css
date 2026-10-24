@@ -1,0 +1,162 @@
+html, body, #app { width: 100%; height: 100%; min-width: 0; min-height: 0; }
+body { overflow: hidden; }
+#app { height: 100dvh; display: flex; flex-direction: column; }
+.header { height: 56px; flex: 0 0 56px; margin: 0 24px; }
+main { width: 100%; max-width: none; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 24px 0; }
+.intro { flex: 0 0 auto; margin-bottom: 12px; }
+h1, .intro h1 { font-size: 24px; margin: 3px 0 7px; line-height: 1.4; }
+.intro .eyebrow { display: none; }
+.workspace { flex: 1; min-width: 0; min-height: 0; width: 100%; display: flex; align-items: stretch; gap: 0; }
+.stage-panel { flex: 1; width: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.stage-top { flex: 0 0 auto; height: auto; min-height: 44px; display: flex; gap: 16px; padding: 8px 16px; }
+.settings-button { background: #fffafc; border: 1px solid #d6cce5; border-radius: 8px; padding: 7px 12px; color: #82719e; font-size: 11px; white-space: nowrap; }
+.stage-top .location { margin-right: auto; white-space: nowrap; }
+.view-toggle { white-space: nowrap; flex-shrink: 0; }
+#scene { flex: 1; min-width: 0; min-height: 0; height: auto; display: grid; grid-template-columns: minmax(0, 1fr); position: relative; }
+#scene.camera-active { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.render-viewport { grid-column: 1; grid-row: 1; position: relative; min-width: 0; min-height: 0; width: 100%; height: 100%; overflow: hidden; }
+#scene .render-viewport > canvas { display: block; width: 100%; height: 100%; }
+.scene-caption { top: 10px; left: 18px; max-width: 45%; z-index: 2; }
+.scene-caption > span { font-size: 8px; }
+.scene-caption strong { font-size: 14px; margin-top: 6px; }
+.orbit-label { display: none; }
+.camera-preview { grid-column: 2; grid-row: 1; align-self: center; justify-self: center; position: relative; inset: auto; transform: none; width: auto; max-width: calc(100% - 24px); min-width: 0; min-height: 0; margin: 12px; padding: 10px; display: flex; flex-direction: column; z-index: 3; background: #25373bed; border: 1px solid #8ed9c6; border-radius: 13px; box-shadow: 0 7px 25px #28384720; }
+.preview-header { flex: 0 0 24px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #e7fff5; gap: 8px; }
+.preview-header strong { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.preview-header .live-dot { background: #71ffd1; box-shadow: 0 0 7px #71ffd1; }
+.preview-header button { color: #d1ede3; font-size: 20px; padding: 0 4px; }
+.video-wrap { flex: 0 0 auto; width: 100%; min-height: 0; aspect-ratio: 9 / 16; margin: 5px 0 0; border-radius: 7px; background: #16272b; position: relative; overflow: hidden; }
+.video-wrap video, .video-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; transform: scaleX(-1); }
+.video-wrap video { opacity: .85; }
+.video-wrap canvas { pointer-events: none; }
+.camera-preview > p { flex: 0 0 28px; height: 28px; overflow: hidden; color: #a7d8c9; font-size: 10px; line-height: 1.4; margin: 7px 3px 0; }
+.stage-bottom { flex: 0 0 auto; min-height: 33px; height: auto; padding: 6px 16px; gap: 12px; }
+.stage-bottom > span:nth-child(2) { display: none; }
+.stage-bottom .text-button { display: inline-block; white-space: nowrap; }
+.mode-status { min-width: 0; font-size: 10px; line-height: 1.4; }
+.zoom-control { display: flex; align-items: center; gap: 8px; margin-left: auto; color: #8d7da3; white-space: nowrap; font-size: 10px; }
+.zoom-control input { width: clamp(55px, 10vw, 120px); height: 16px; margin: 0; accent-color: #9380b0; }
+.zoom-control output { width: 32px; font-variant-numeric: tabular-nums; }
+.motion-bar { flex: 0 0 auto; min-height: 51px; height: auto; padding: 8px 12px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.motion-bar > span { font-size: 10px; }
+.motion { padding: 8px 13px; font-size: 11px; white-space: nowrap; }
+.pause { padding: 7px 11px; }
+.interaction-status { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px 16px; padding: 8px 16px; background: #fcfafee0; color: #9c8bad; font-size: 10px; line-height: 1.4; border-top: 1px solid #e6dfee; }
+#live-task { color: #8a76a3; }
+.camera-bar { flex-shrink: 0; display: flex; flex-wrap: nowrap; gap: 14px; padding: 10px 16px; margin-top: 10px; }
+.camera-copy { flex: 1; min-width: 0; }
+.camera-copy strong { font-size: 12px; }
+.camera-copy p { max-width: none; font-size: 10px; margin-top: 4px; line-height: 1.5; }
+.camera-bar > .primary { width: auto; margin-left: auto; padding: 10px 16px; }
+.privacy { margin-left: auto; }
+footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
+#experience-settings { width: min(780px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 22px; }
+#experience-settings[open] { display: flex; flex-direction: column; gap: 16px; }
+.settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-shrink: 0; }
+.settings-heading h2 { margin: 6px 0 0; font-size: 20px; }
+.settings-heading button { white-space: nowrap; }
+.settings-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 14px; min-height: 0; overflow: auto; }
+.settings-content .career-panel { min-height: 0; padding: 16px 12px; display: flex; flex-direction: column; overflow: visible; width: auto; }
+.settings-content .panel-title { flex-shrink: 0; }
+.settings-content h2 { font-size: 13px; margin: 0; }
+.settings-content .count { display: inline; }
+.settings-content .filters { display: flex; gap: 4px; padding: 10px 0; white-space: nowrap; }
+.settings-content .filter { font-size: 10px; padding: 6px 10px; }
+.settings-content #career-list { display: grid; grid-template-columns: 1fr; gap: 4px; }
+.settings-content .career-card { min-height: 43px; margin: 0; padding: 5px 8px; gap: 10px; }
+.settings-content .career-icon { width: 30px; height: 30px; font-size: 22px; }
+.settings-content .career-card strong { font-size: 11px; }
+.settings-content .career-card small { display: block; font-size: 7px; margin-top: 2px; }
+.settings-content .career-check { display: inline; }
+.settings-content .template-note, .settings-content .learning-note { display: none; }
+.settings-content .experience-panel { display: flex; flex-direction: column; grid-column: auto; min-width: 0; width: auto; gap: 12px; }
+.settings-content .identity-panel, .settings-content .mission-panel { padding: 16px; min-width: 0; }
+.settings-content .identity-row { margin: 12px 0; }
+.settings-content .face-preview { width: 45px; height: 50px; }
+.settings-content .identity-row strong { font-size: 11px; }
+.settings-content .identity-row p { font-size: 9px; }
+.settings-content .upload-button { padding: 10px; font-size: 10px; }
+.settings-content .helper { font-size: 9px; line-height: 1.7; }
+.settings-content .mission-art, .settings-content .mission-kicker { display: none; }
+.settings-content .mission-panel h3 { font-size: 12px; margin: 12px 0 8px; }
+.settings-content .mission-panel > p { font-size: 9px; margin-bottom: 12px; }
+.settings-content .mission-result { padding: 9px; margin-top: 10px; }
+.settings-content .mission-result p { display: block; margin-bottom: 0; }
+.settings-content .restore { padding: 4px; font-size: 9px; }
+#experience-settings > .primary { flex-shrink: 0; margin: 0; }
+@media (max-height: 650px) {
+  .header { height: 44px; flex-basis: 44px; }
+  main { padding-top: 6px; }
+  .intro { margin-bottom: 7px; }
+  .intro h1 { font-size: 19px; margin: 2px 0; }
+  .intro p, .session-tag { display: none; }
+  .stage-top { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
+  .camera-bar { padding: 7px 12px; margin-top: 7px; }
+  .camera-copy p { display: none; }
+  .interaction-status { padding-top: 5px; padding-bottom: 5px; }
+  .motion-bar { min-height: 40px; padding: 5px 8px; }
+  .motion { padding: 6px 10px; }
+}
+@media (max-width: 900px) {
+  .header { margin: 0 16px; }
+  main { padding-left: 14px; padding-right: 14px; }
+  .brand { font-size: 17px; }
+  .brand-icon { font-size: 30px; }
+  .session-tag, .privacy, .course-label { display: none; }
+  .intro h1 { font-size: 21px; }
+  h1 span { display: inline; }
+  .intro p { font-size: 10px; }
+  .camera-copy strong { font-size: 11px; }
+  .camera-copy p { font-size: 9px; }
+  .motion { font-size: 10px; padding: 7px 9px; }
+  .scene-caption { left: 12px; }
+  .scene-caption strong { font-size: 12px; }
+  .interaction-status { font-size: 9px; }
+}
+@media (max-width: 600px) {
+  .header { height: 44px; flex-basis: 44px; margin: 0 12px; }
+  .brand { font-size: 15px; }
+  .brand-icon { font-size: 25px; }
+  .brand-sub { font-size: 7px; }
+  .quiet { font-size: 10px; }
+  main { padding: 8px 8px 0; }
+  .intro { margin-bottom: 8px; }
+  .intro h1 { font-size: 17px; margin: 0; }
+  .intro p { display: none; }
+  .stage-top { padding: 6px 8px; gap: 7px; min-height: 37px; }
+  .settings-button { font-size: 9px; padding: 6px; }
+  .stage-top .location { font-size: 9px; gap: 4px; }
+  .view-toggle { font-size: 9px; padding: 5px; gap: 3px; }
+  #scene.camera-active { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .camera-preview { margin: 6px 6px 6px 0; padding: 6px; }
+  .preview-header { font-size: 9px; flex-basis: 20px; }
+  .preview-header button { font-size: 17px; }
+  .camera-preview > p { font-size: 8px; margin: 4px 1px 0; }
+  .scene-caption { max-width: 46%; left: 9px; top: 8px; }
+  .scene-caption strong { font-size: 10px; line-height: 1.6; }
+  .scene-caption > span { font-size: 6px; letter-spacing: 1px; }
+  .stage-bottom { gap: 6px; padding: 5px 8px; min-height: 30px; }
+  .stage-bottom .text-button { display: none; }
+  .mode-status { font-size: 8px; }
+  .zoom-control { font-size: 8px; gap: 4px; }
+  .zoom-control input { width: 55px; }
+  .motion-bar { min-height: 0; padding: 6px; gap: 4px; }
+  .motion-bar > span { display: none; }
+  .motion { font-size: 9px; padding: 6px 7px; }
+  .pause { font-size: 10px; padding: 5px 7px; }
+  .interaction-status { padding: 5px 8px; font-size: 8px; }
+  .camera-bar { padding: 8px; margin-top: 8px; gap: 6px; }
+  .camera-icon { display: none; }
+  .camera-copy strong { font-size: 10px; }
+  .camera-copy p { display: none; }
+  .camera-bar > .primary { font-size: 10px; padding: 9px; gap: 5px; }
+  footer { padding: 6px 0; font-size: 8px; }
+  footer > span:last-child { display: none; }
+  #experience-settings { padding: 14px; }
+  .settings-heading h2 { font-size: 17px; }
+  .settings-content { grid-template-columns: 1fr; }
+  .settings-content #career-list { grid-template-columns: 1fr 1fr; }
+  .settings-content .career-card small { display: none; }
+  .settings-content .count { margin-left: auto; }
+  .settings-content .career-panel, .settings-content .identity-panel, .settings-content .mission-panel { padding: 12px; }
+}
