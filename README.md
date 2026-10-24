@@ -13,6 +13,12 @@ npm run dev
 
 打开终端输出的本地地址，默认 http://127.0.0.1:5173/ 。`npm run build` 生成 `dist/`。
 
+## 部署到 Vercel
+
+将仓库导入 Vercel，构建命令为 `npm run build`，输出目录为 `dist`，安装命令为 `npm ci`（仓库已提供 `vercel.json`）。推送到已连接的 Git 分支后，Vercel 会自动构建预览或生产部署。构建依赖 Node.js 20.19+ 或 22.12+。
+
+生产首页不加载姿态识别库；只有开启摄像头时才会下载 MediaPipe JavaScript 模块，随后仍需从 jsDelivr 获取 WASM、从 Google Storage 获取模型。部署站点通过 HTTPS 提供摄像头权限。
+
 ## 体验方式
 
 1. 点击“设置”，选择九个职业之一，准备头像后收起设置。02、03 面板默认不占用互动舞台。
