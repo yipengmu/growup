@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FruitGame, HandInput, CooperationBasket, FRUIT_CONFIG, FRUIT_TYPES, handsRaised } from './fruit-game.js';
 import './fruit.css';
+import { SCREEN_ARM_LANDMARKS } from './pose-rig.js';
 import { FruitAudio, FEEDBACK_CONFIG, encouragement, drawSwipe, drawBurst, drawCelebration, fruitHalfPose } from './fruit-feedback.js';
 
 const colors = { apple: '#ee696d', orange: '#f5a63c', watermelon: '#65aa7a', strawberry: '#de5178' };
@@ -41,7 +42,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
   toolbar.innerHTML = '<div class="mode-switch" role="group" aria-label="互动模式"><button type="button" data-play-mode="free" aria-pressed="true">自由模式</button><button type="button" data-play-mode="fruit" aria-pressed="false">切水果</button></div>';
   document.querySelector('.stage-top').prepend(toolbar);
   const setup = document.createElement('section'); setup.className = 'fruit-settings';
-  setup.innerHTML = '<h3>切水果 · 老师设置</h3><label>回合时长 <select id="fruit-duration"><option value="30">30 秒</option><option value="45">45 秒</option><option value="60" selected>60 秒</option></select></label><label>出果节奏 <select id="fruit-pace"><option value="slow">慢慢收集</option><option value="normal">轻快收集</option></select></label><label>可用手臂 <select id="fruit-hands"><option value="both">双手</option><option value="left">角色左手</option><option value="right">角色右手</option></select></label><label>输入方式 <select id="fruit-input"><option value="camera">摄像头体感</option><option value="mouse">老师演示 · 按住拖动</option></select></label><label><input type="checkbox" id="fruit-sound" checked> 音乐与音效</label><p>仅限老师监督下的单人 Demo，尚无身份锁定。原地站好，肩、肘、腕入镜即可，无需露出腿部。</p><p>合作篮子只保存在本页内存，刷新后归零。</p><button id="fruit-clear">清空本堂合作篮子</button>';
+  setup.innerHTML = '<h3>切水果 · 老师设置</h3><label>回合时长 <select id="fruit-duration"><option value="30">30 秒</option><option value="45">45 秒</option><option value="60" selected>60 秒</option></select></label><label>出果节奏 <select id="fruit-pace"><option value="slow">慢慢收集</option><option value="normal">轻快收集</option></select></label><label>可用手臂 <select id="fruit-hands"><option value="both">双手</option><option value="left">画面左手</option><option value="right">画面右手</option></select></label><label>输入方式 <select id="fruit-input"><option value="camera">摄像头体感</option><option value="mouse">老师演示 · 按住拖动</option></select></label><label><input type="checkbox" id="fruit-sound" checked> 音乐与音效</label><p>仅限老师监督下的单人 Demo，尚无身份锁定。原地站好，肩、肘、腕入镜即可，无需露出腿部。</p><p>合作篮子只保存在本页内存，刷新后归零。</p><button id="fruit-clear">清空本堂合作篮子</button>';
   document.querySelector('.settings-content').append(setup);
   const $ = id => document.getElementById(id);
   function clearInput() { pendingSegments = []; Object.values(inputs).forEach(i => i.clear()); trails = []; points = []; pointerDown = false; pointer = null; }
@@ -213,7 +214,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
       const size = Math.min(viewport.clientWidth,viewport.clientHeight);
       if (size <= 0) { game.update(dt,false); paintUI(false); return; }
       const available = side => {
-        const indices = side === 'left' ? [12,14,16] : [11,13,15];
+        const indices = SCREEN_ARM_LANDMARKS[side];
         return pose && nowMs-data.time < 180 && indices.every(i => pose[i] && pose[i].visibility >= .6) && [11,12].every(i => pose[i]?.visibility >= .6) && ($('fruit-hands').value === 'both' || $('fruit-hands').value === side);
       };
       const ready = !document.querySelector('#experience-settings').open && (game.demo || Boolean(state.camera && (available('left') || available('right'))));
@@ -239,8 +240,8 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
           const p = limbs[side].wrist.getWorldPosition(new THREE.Vector3()).project(camera);
           const point = { x: (p.x+1)*viewport.clientWidth/2/size, y: (1-p.y)*viewport.clientHeight/2/size };
           if (valid) points.push(point);
-          const wrist = side === 'left' ? 16 : 15;
-          const raw = valid ? { x: pose[wrist].x-(pose[11].x+pose[12].x)/2, y: pose[wrist].y-(pose[11].y+pose[12].y)/2 } : null;
+          const wrist = SCREEN_ARM_LANDMARKS[side][2];
+          const raw = valid ? { x: (pose[11].x+pose[12].x)/2-pose[wrist].x, y: pose[wrist].y-(pose[11].y+pose[12].y)/2 } : null;
           const seg = inputs[side].sample(point,raw,now,scale,active && valid);
           if (seg) segments.push({ ...seg, hand: side });
         }

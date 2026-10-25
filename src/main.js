@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import './style.css';
 import './layout.css';
-import { solvePoseRig, visible } from './pose-rig.js';
+import { solvePoseRig, visible, mirrorPoseLandmarks } from './pose-rig.js';
 import { fitDistance, portraitPreviewWidth } from './viewport.js';
 import { faceCrop } from './face-crop.js';
 import { cameraCaptureConstraints, useWidestCamera } from './camera-capture.js';
@@ -538,12 +538,13 @@ function animate() {
   let leftAngle = -0.15, rightAngle = 0.15, leftBend = 0, rightBend = 0, bodyTilt = 0, headTilt = 0;
   let bodyYaw = 0;
   const legAngles = { left: [0,0], right: [0,0] };
-  const rig = tracking && worldPose ? solvePoseRig(worldPose) : null;
+  const mirroredPose = tracking ? mirrorPoseLandmarks(pose) : null;
+  const rig = tracking && worldPose ? solvePoseRig(mirrorPoseLandmarks(worldPose)) : null;
   if (tracking) {
-    const angle = (shoulderIndex, elbowIndex) => Math.atan2(pose[elbowIndex].x - pose[shoulderIndex].x, pose[elbowIndex].y - pose[shoulderIndex].y);
-    if ([12,14,16].every((index) => pose[index].visibility > 0.5)) { leftAngle = angle(12,14); leftBend = angle(14,16) - leftAngle; }
-    if ([11,13,15].every((index) => pose[index].visibility > 0.5)) { rightAngle = angle(11,13); rightBend = angle(13,15) - rightAngle; }
-    bodyTilt = THREE.MathUtils.clamp(Math.atan2(pose[12].y - pose[11].y, Math.abs(pose[12].x - pose[11].x)), -0.2, 0.2);
+    const angle = (shoulderIndex, elbowIndex) => Math.atan2(mirroredPose[elbowIndex].x - mirroredPose[shoulderIndex].x, mirroredPose[elbowIndex].y - mirroredPose[shoulderIndex].y);
+    if ([12,14,16].every((index) => mirroredPose[index].visibility > 0.5)) { leftAngle = angle(12,14); leftBend = angle(14,16) - leftAngle; }
+    if ([11,13,15].every((index) => mirroredPose[index].visibility > 0.5)) { rightAngle = angle(11,13); rightBend = angle(13,15) - rightAngle; }
+    bodyTilt = THREE.MathUtils.clamp(Math.atan2(mirroredPose[12].y - mirroredPose[11].y, Math.abs(mirroredPose[12].x - mirroredPose[11].x)), -0.2, 0.2);
     headTilt = bodyTilt * 0.6;
   } else if (state.demo) {
     if (state.motion === 'wave') { rightAngle = 2.35; rightBend = Math.sin(elapsed * 4) * 0.35 + 0.35; leftAngle = -0.15 + Math.sin(elapsed * 2) * 0.06; }

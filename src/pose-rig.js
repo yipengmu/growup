@@ -3,6 +3,22 @@ import { Euler, Quaternion, Vector3, MathUtils } from 'three';
 const down = new Vector3(0, -1, 0);
 const forward = new Vector3(0, 0, 1);
 
+// Character side names refer to the on-screen side. The video is mirrored too.
+export const SCREEN_ARM_LANDMARKS = Object.freeze({
+  left: Object.freeze([11,13,15]),
+  right: Object.freeze([12,14,16]),
+});
+const mirrorPairs = [[1,4],[2,5],[3,6],[7,8],[9,10],[11,12],[13,14],[15,16],[17,18],[19,20],[21,22],[23,24],[25,26],[27,28],[29,30],[31,32]];
+
+export function mirrorPoseLandmarks(points) {
+  if (!points) return null;
+  // Reflect positions and exchange paired joints together, keeping chains intact.
+  // Both image-space and world-space callers only use relative coordinates.
+  const mirrored = points.map(point => point ? { ...point, x: -point.x } : point);
+  for (const [left, right] of mirrorPairs) [mirrored[left], mirrored[right]] = [mirrored[right], mirrored[left]];
+  return mirrored;
+}
+
 export function visible(points, indices, threshold = 0.55) {
   return Boolean(points && indices.every((index) => {
     const point = points[index];
