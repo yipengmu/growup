@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>移动布局回归 · 模拟摄像头</title></head>
+<body><div id="app"></div>
+<script type="module">
+// Real app layout and renderer, with a drawn preview instead of camera access.
+await import('../../src/main.js');
+const scene = document.querySelector('#scene'), preview = document.querySelector('#camera-preview');
+scene.classList.add('camera-active'); document.querySelector('#app').classList.add('is-interacting');
+preview.hidden = false;
+document.querySelector('.preview-header strong').textContent = '模拟真人';
+document.querySelector('#tracking-label').textContent = '布局检查 · 不访问摄像头';
+const canvas = document.createElement('canvas'); canvas.width = 400; canvas.height = 534;
+canvas.setAttribute('aria-label', '模拟真人画面');
+canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain';
+document.querySelector('.video-wrap').append(canvas);
+const c = canvas.getContext('2d'); c.fillStyle = '#e1eae6'; c.fillRect(0,0,400,534);
+c.fillStyle = '#7f9e99'; c.beginPath(); c.arc(200,150,55,0,Math.PI*2); c.fill();
+c.lineCap = 'round'; c.lineWidth = 40; c.beginPath(); c.moveTo(200,230); c.lineTo(200,360); c.moveTo(200,240);c.lineTo(120,320);c.moveTo(200,240);c.lineTo(280,160); c.moveTo(200,360);c.lineTo(150,480);c.moveTo(200,360);c.lineTo(250,480);c.strokeStyle='#7f9e99';c.stroke();
+c.lineWidth=4;c.strokeStyle='#45d9b0';c.beginPath();c.moveTo(120,320);c.lineTo(200,240);c.lineTo(280,160);c.stroke();
+const cameraButton = document.querySelector('#camera-button');cameraButton.setAttribute('aria-pressed','true');cameraButton.querySelector('span').textContent='关闭摄像头';
+if (new URL(location.href).searchParams.get('mode') === 'fruit') document.querySelector('[data-play-mode="fruit"]').click();
+</script></body></html>

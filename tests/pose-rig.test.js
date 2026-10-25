@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector3, Quaternion } from 'three';
 import { solvePoseRig, mirrorPoseLandmarks, SCREEN_ARM_LANDMARKS } from '../src/pose-rig.js';
-import { fitDistance, portraitPreviewWidth } from '../src/viewport.js';
+import { fitDistance, portraitPreviewWidth, compactPreviewWidth } from '../src/viewport.js';
 
 function standingPose() {
   const points = Array.from({length:33}, () => ({x:0,y:0,z:0,visibility:0}));
@@ -108,4 +108,18 @@ test('portrait preview fits the available height and stays inside its column', (
     assert.ok(videoHeight + 26 <= height + 1e-9);
     if (width > height) assert.ok(videoHeight >= height - 27);
   }
+});
+
+test('compact camera preview fits phone orientations and preserves source framing', () => {
+  for (const [height, width] of [[480,150],[200,300],[300,110],[1,1]]) {
+    for (const aspect of [9/16,3/4,4/3,16/9]) {
+      const preview = compactPreviewWidth(height,width,aspect);
+      assert.ok(preview >= 1 && Number.isFinite(preview));
+      if (height > 12 && width > 8) {
+        assert.ok(preview <= width - 8 + 1e-9);
+        assert.ok(preview / aspect <= height - 12 + 1e-9);
+      }
+    }
+  }
+  assert.equal(compactPreviewWidth(400,150,NaN), compactPreviewWidth(400,150,3/4));
 });

@@ -1,0 +1,69 @@
+/* Compact layouts preserve the desktop's side-by-side interaction model. */
+@media (max-width: 900px), (max-width: 1100px) and (max-height: 550px) {
+  #app { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .header { height: 52px; flex-basis: 52px; margin: 0 12px; }
+  .header .brand { font-size: 18px; gap: 6px; }
+  .header .brand-icon { font-size: 29px; }
+  .header .brand-sub { display: none; }
+  .header .camera-launch { min-height: 40px; padding: 8px 12px; font-size: 12px; }
+  main, .is-interacting main { padding: 8px 8px max(8px, env(safe-area-inset-bottom)); }
+  .workspace { flex-direction: column; gap: 8px; overflow: hidden; }
+  .career-panel { display: flex; align-items: center; gap: 6px; flex: 0 0 58px; width: 100%; min-height: 0; max-height: none; padding: 5px; overflow: hidden; border-radius: 12px; }
+  .career-panel::before { content: '职业'; flex: 0 0 28px; padding-left: 3px; font-size: 11px; color: #92859d; }
+  .career-panel .panel-title, .career-panel .filters, .career-panel .template-note { display: none; }
+  .career-panel #career-list { position: relative; display: flex; flex: 1; min-width: 0; gap: 6px; overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; scrollbar-width: none; }
+  .career-panel #career-list::-webkit-scrollbar { display: none; }
+  .career-panel .career-card { flex: 0 0 auto; width: auto; min-height: 44px; padding: 7px 10px; gap: 7px; margin: 0; }
+  .career-panel .career-icon { width: 26px; height: 28px; font-size: 22px; }
+  .career-panel .career-card strong { font-size: 12px; white-space: nowrap; }
+  .career-panel .career-card small, .career-panel .career-check { display: none; }
+  .stage-panel { flex: 1 1 0; width: 100%; min-height: 0; border-radius: 16px; }
+  .stage-panel .stage-top { min-height: 50px; padding: 5px 8px; gap: 6px; flex-wrap: nowrap; }
+  .stage-top .location { display: none; }
+  .stage-top .settings-button { min-height: 40px; min-width: 48px; padding: 7px 9px; font-size: 11px; }
+  .mode-switch { padding: 3px; gap: 3px; }
+  .mode-switch button { min-height: 40px; padding: 7px 14px; font-size: 12px; }
+  #scene.camera-active { grid-template-columns: minmax(0, .58fr) minmax(0, .42fr); }
+  #scene.fruit-active.camera-active { grid-template-columns: minmax(0, .6fr) minmax(0, .4fr); }
+  #scene.camera-active .camera-preview { grid-column: 2; grid-row: 1; align-self: center; justify-self: center; max-width: calc(100% - 8px); max-height: calc(100% - 12px); margin: 4px; padding: 0; border-radius: 11px; }
+  #scene.camera-active .camera-preview .video-wrap { flex: 0 0 auto; aspect-ratio: var(--preview-aspect, 3 / 4); }
+  .preview-header { min-height: 40px; padding: 2px 3px 12px 7px; font-size: 10px; }
+  .preview-header strong { gap: 4px; }
+  .preview-header button { min-width: 36px; min-height: 36px; font-size: 24px; }
+  .camera-preview > p { font-size: 9px; line-height: 1.5; padding: 14px 7px 6px; }
+  .scene-caption { top: 8px; left: 8px; padding: 7px 9px; max-width: calc(58% - 16px); }
+  .scene-caption > span { display: none; }
+  .scene-caption strong { margin: 0; font-size: 11px; line-height: 1.5; }
+  .stage-bottom { display: none; }
+  .motion-bar { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding: 5px 7px; gap: 6px; scrollbar-width: none; }
+  .motion-bar > span { display: none; }
+  .motion, .pause { flex-shrink: 0; min-height: 40px; padding: 8px 10px; font-size: 11px; }
+  .fruit-hud { top: 6px; left: 6px; right: 6px; gap: 4px; }
+  .fruit-hud > div { padding: 5px 7px; border-radius: 9px; }
+  .fruit-hud small { font-size: 9px; }
+  .fruit-hud strong { font-size: 20px; line-height: 1.3; }
+  .fruit-preparing .fruit-message { font-size: 12px; white-space: normal; width: max-content; max-width: calc(100% - 16px); padding: 8px; }
+  .fruit-card { bottom: 12px; left: 6px; right: 6px; padding: 9px; max-height: calc(100% - 90px); overflow: auto; }
+  .fruit-card button { min-height: 40px; font-size: 11px; }
+}
+
+/* A short landscape viewport uses a narrow career rail, leaving all height to play. */
+@media (max-width: 1100px) and (max-height: 550px) and (orientation: landscape) {
+  .header { height: 44px; flex-basis: 44px; }
+  .header .brand { font-size: 16px; }
+  .header .brand-icon { font-size: 25px; }
+  .header .camera-launch { min-height: 36px; padding: 6px 10px; font-size: 11px; }
+  main, .is-interacting main { padding-top: 5px; padding-bottom: max(5px, env(safe-area-inset-bottom)); }
+  .workspace { flex-direction: row; gap: 6px; }
+  .career-panel { flex: 0 0 76px; width: 76px; height: 100%; padding: 5px; }
+  .career-panel::before { display: none; }
+  .career-panel #career-list { flex-direction: column; align-self: stretch; overflow-x: hidden; overflow-y: auto; }
+  .career-panel .career-card { flex-direction: column; justify-content: center; width: 100%; min-height: 56px; padding: 5px 2px; gap: 2px; }
+  .career-panel .career-card strong { font-size: 10px; }
+  .stage-panel .stage-top { min-height: 44px; padding-top: 2px; padding-bottom: 2px; }
+  .mode-switch button, .stage-top .settings-button { min-height: 36px; }
+  .motion-bar { padding-top: 3px; padding-bottom: 3px; }
+  .motion, .pause { min-height: 32px; padding: 5px 9px; }
+  .scene-caption { max-width: calc(58% - 16px); }
+  .fruit-cheer { top: 60px; padding: 6px 9px; font-size: 12px; }
+}

@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import './style.css';
 import './layout.css';
+import './mobile-layout.css';
 import { solvePoseRig, visible, mirrorPoseLandmarks } from './pose-rig.js';
-import { fitDistance, portraitPreviewWidth } from './viewport.js';
+import { fitDistance, portraitPreviewWidth, compactPreviewWidth } from './viewport.js';
 import { faceCrop } from './face-crop.js';
 import { cameraCaptureConstraints, useWidestCamera } from './camera-capture.js';
 import { createFruitStage } from './fruit-stage.js';
@@ -23,12 +24,13 @@ const careers = [
 ];
 
 const state = { career: careers[0], filter: '全部', camera: false, tracking: false, skeleton: true, demo: true, motion: 'wave', paused: false, cameraView: 'wide' };
+const compactLayout = window.matchMedia('(max-width: 900px), (max-width: 1100px) and (max-height: 550px)');
 const icons = { camera: '<svg viewBox="0 0 24 24"><path d="m8 5 1-2h6l1 2h4v15H4V5z"/><circle cx="12" cy="12" r="4"/></svg>' };
 document.querySelector('#app').innerHTML = `
   <header class="header"><a class="brand" href="/" aria-label="未来的我首页"><span class="brand-icon">✳</span><div>未来的我<span class="brand-sub">FUTURE ME LAB</span></div></a><button class="primary camera-launch" id="camera-button" aria-pressed="false">${icons.camera}<span>开启摄像头</span></button></header>
   <main><div class="intro"><div><div class="eyebrow">A LITTLE IMAGINATION, A BIG FUTURE</div><h1>长大后的我，<span>会是什么样子？</span></h1><p>开启摄像头，让未来的自己跟着你一起动起来。</p></div><div class="session-tag"><span class="live-dot"></span> 职业体验馆 <span class="tag-version">风格 Demo 01</span></div></div>
   <div class="workspace">
-    <aside class="career-panel panel"><div class="panel-title"><span class="step">01</span><h2>选择我的梦想</h2><span class="count">${careers.length} 个职业</span></div><div class="filters" role="group" aria-label="职业分类">${['全部','探索','守护','创造'].map((label) => `<button class="filter ${label === '全部' ? 'active' : ''}" data-filter="${label}">${label}</button>`).join('')}</div><div id="career-list"></div><div class="template-note"><span>✧</span><div><strong>每一个梦想，都值得被看见</strong><p>预制职业模板 · 更多可能正在生长</p></div></div></aside>
+    <aside class="career-panel panel"><div class="panel-title"><span class="step">01</span><h2>选择我的梦想</h2><span class="count">${careers.length} 个职业</span></div><div class="filters" role="group" aria-label="职业分类">${['全部','探索','守护','创造'].map((label) => `<button class="filter ${label === '全部' ? 'active' : ''}" data-filter="${label}">${label}</button>`).join('')}</div><div id="career-list" role="group" aria-label="选择职业"></div><div class="template-note"><span>✧</span><div><strong>每一个梦想，都值得被看见</strong><p>预制职业模板 · 更多可能正在生长</p></div></div></aside>
     <section class="stage-panel panel"><div class="stage-top"><span class="location"><span class="live-dot"></span><span id="place">月球探索站</span></span><button class="view-toggle" id="skeleton-toggle" aria-pressed="true">◎ 骨架节点 <span>开</span></button></div><div id="scene"><div class="scene-caption"><span id="career-en">SPACE EXPLORER</span><strong>你好，未来的<span id="career-name">宇航员</span>！</strong></div><div class="orbit-label">✦ 20 年后的想象</div><div class="stage-loader" id="stage-loader">正在布置梦想舞台…</div></div><div class="stage-bottom"><span class="mode-status" id="mode-status"><i></i> 演示动作 · 非实时识别</span><span>拖动旋转视角 · 滚轮缩放</span><button id="reset-view" class="text-button">视角复位 ↺</button></div><div class="motion-bar"><span>试一试</span><button class="motion active" data-motion="wave">👋 挥挥手</button><button class="motion" data-motion="stretch">🙌 展开双臂</button><button class="motion" data-motion="sway">🌿 左右摇摆</button><button id="pause" class="pause" aria-label="暂停演示动画">Ⅱ</button></div></section>
   </div>
   <section class="camera-preview panel" id="camera-preview" hidden><div class="preview-header"><strong><span class="live-dot"></span> AI 观察窗</strong><button class="text-button" id="close-camera" aria-label="关闭摄像头">×</button></div><div class="video-wrap"><video id="video" autoplay muted playsinline></video><canvas id="landmarks"></canvas></div><p id="tracking-label" role="status">等待识别 · 请正面站好</p></section>
@@ -47,6 +49,14 @@ settingsButton.textContent = '⚙ 设置';
 settingsButton.setAttribute('aria-haspopup', 'dialog');
 document.querySelector('.stage-top').append(settingsButton);
 settingsButton.addEventListener('click', () => settings.showModal());
+compactLayout.addEventListener('change', () => {
+  if (compactLayout.matches) {
+    state.filter = '全部';
+    document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('active', button.dataset.filter === '全部'));
+    renderCareers();
+  }
+  updateCameraFraming();
+});
 for (const selector of ['#close-settings','#start-interaction']) document.querySelector(selector).addEventListener('click', () => settings.close());
 for (const [motion, label] of [['march','🦵 抬腿踏步'],['turn','↔ 转身看看']]) {
   const button = document.createElement('button');
@@ -66,7 +76,12 @@ function updateCameraFraming() {
   const preview = document.querySelector('#camera-preview');
   const portrait = state.cameraView === 'portrait';
   preview.classList.toggle('portrait-view', portrait);
-  if (portrait) preview.style.width = `${portraitPreviewWidth(container.clientHeight, container.clientWidth * 0.54)}px`;
+  if (compactLayout.matches) {
+    const aspect = portrait ? 9 / 16 : (video.videoWidth / video.videoHeight || 3 / 4);
+    const fraction = container.classList.contains('fruit-active') ? .4 : .42;
+    preview.style.width = `${compactPreviewWidth(container.clientHeight, container.clientWidth * fraction, aspect)}px`;
+    preview.style.setProperty('--preview-aspect', String(aspect));
+  } else if (portrait) preview.style.width = `${portraitPreviewWidth(container.clientHeight, container.clientWidth * 0.54)}px`;
   else preview.style.removeProperty('width');
 }
 document.querySelectorAll('[data-camera-view]').forEach((button) => button.addEventListener('click', () => {
@@ -359,6 +374,11 @@ function chooseCareer(id) {
   environment.setCareer(career.id);
   updateStageTheme(career);
   updateAccessories(); renderCareers();
+  if (compactLayout.matches) {
+    const list = document.querySelector('#career-list'), selected = list.querySelector('.selected');
+    list.scrollTo({ left: selected.offsetLeft - (list.clientWidth - selected.clientWidth) / 2,
+      top: selected.offsetTop - (list.clientHeight - selected.clientHeight) / 2, behavior: 'smooth' });
+  }
 }
 function updateStageTheme(career) {
   const panel = document.querySelector('.stage-panel');
@@ -410,6 +430,7 @@ let pose = null;
 let worldPose = null;
 let startingCamera = false;
 const video = document.querySelector('#video');
+video.addEventListener('loadedmetadata', updateCameraFraming);
 const landmarkCanvas = document.querySelector('#landmarks');
 const landmarkContext = landmarkCanvas.getContext('2d');
 function updateMode() {
