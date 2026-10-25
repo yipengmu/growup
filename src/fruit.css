@@ -1,10 +1,11 @@
 #scene.fruit-active.camera-active { grid-template-columns: minmax(0, .6fr) minmax(0, .4fr); }
 .fruit-mode .scene-caption, .fruit-mode .motion-bar, .fruit-mode .interaction-status { display: none; }
+.fruit-mode .stage-bottom { display: none; }
 .fruit-mode .render-viewport { touch-action: none; }
 .fruit-toolbar { flex-shrink: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.fruit-toolbar label, .fruit-settings label { font-size: 12px; color: #665878; }
-.fruit-toolbar button, .fruit-toolbar select, .fruit-card button, .fruit-settings button, .fruit-settings select { border: 1px solid #d4c8e1; background: #fffcff; border-radius: 8px; color: #655378; padding: 7px 10px; font: inherit; font-size: 12px; }
-.fruit-toolbar button:disabled, .fruit-card button:disabled, .fruit-settings select:disabled { opacity: .5; cursor: default; }
+.fruit-settings label { font-size: 12px; color: #665878; }
+.fruit-card button, .fruit-settings button, .fruit-settings select { border: 1px solid #d4c8e1; background: #fffcff; border-radius: 8px; color: #655378; padding: 7px 10px; font: inherit; font-size: 12px; }
+.fruit-card button:disabled, .fruit-settings select:disabled { opacity: .5; cursor: default; }
 .fruit-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 .fruit-overlay[hidden] { display: none; }
 .fruit-hud { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 8px; }
@@ -18,7 +19,6 @@
 .fruit-card p { color: #7d6c89; font-size: 12px; line-height: 1.7; margin: 0 0 8px; }
 .fruit-card button { margin: 3px; }
 .fruit-card button:first-of-type { background: #7b6596; border-color: #7b6596; color: white; }
-.fruit-hint { position: absolute; bottom: 9px; left: 8px; right: 8px; text-align: center; color: #6c587d; font-size: 10px; }
 .fruit-settings { grid-column: 1 / -1; padding: 14px; background: #f6f1fa; border: 1px solid #e0d6eb; border-radius: 12px; }
 .fruit-settings h3 { margin: 0 0 12px; font-size: 14px; color: #6c587d; }
 .fruit-settings label { display: inline-flex; align-items: center; gap: 5px; margin: 0 10px 10px 0; }
@@ -31,7 +31,6 @@
  .fruit-message { top: 76px; font-size: 12px; }
  .fruit-card { left: 3%; right: 3%; padding: 8px; }
  .fruit-card p, .fruit-card button { font-size: 10px; }
- .fruit-hint { font-size: 8px; }
 }
 
 .fruit-cheer {
@@ -60,4 +59,18 @@
 @media (max-width: 600px) {
   .stage-top { flex-wrap: wrap; gap: 6px; }
   .fruit-toolbar { flex-wrap: wrap; gap: 5px; }
+}
+
+/* A single start cue leaves the character and camera unobstructed. */
+.fruit-preparing .fruit-message { top: auto; bottom: 20px; left: 50%; right: auto; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 9px 16px; border-radius: 12px; background: #fffcf5e8; font-size: 15px; font-weight: 500; white-space: nowrap; text-shadow: none; }
+@media (max-width: 600px) {
+  .fruit-preparing .fruit-message { bottom: 12px; font-size: 12px; padding: 8px 12px; }
+}
+
+.mode-switch { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #d8cde5; border-radius: 12px; background: #ffffff70; }
+.mode-switch button { border: 1px solid transparent; border-radius: 8px; padding: 8px 16px; background: transparent; color: #83728f; font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.mode-switch button[aria-pressed="true"] { background: #8d7aab; border-color: #8d7aab; color: #fff; box-shadow: 0 2px 6px #68517b20; }
+@media (max-width: 600px) {
+  .mode-switch { gap: 2px; padding: 3px; }
+  .mode-switch button { padding: 7px 10px; font-size: 11px; }
 }

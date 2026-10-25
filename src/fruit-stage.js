@@ -32,17 +32,17 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
   const seedMaterial = new THREE.MeshBasicMaterial({ color: '#593a32' });
   const pithMaterial = new THREE.MeshBasicMaterial({ color: '#fff5c9' });
   const overlay = document.createElement('div'); overlay.className = 'fruit-overlay'; overlay.hidden = true;
-  overlay.innerHTML = '<div class="fruit-hud"><div><small>剩余时间</small><strong id="fruit-time">60</strong></div><div><small>本轮收集</small><strong id="fruit-count">0 <em>/ 12</em></strong></div><div><small>合作篮子</small><strong id="fruit-basket">0</strong></div></div><canvas class="fruit-trails"></canvas><div class="fruit-cheer" role="status" aria-live="polite" hidden></div><div class="fruit-message" role="status" aria-live="polite"></div><div class="fruit-card"></div><div class="fruit-hint"></div>';
+  overlay.innerHTML = '<div class="fruit-hud"><div><small>剩余时间</small><strong id="fruit-time">60</strong></div><div><small>本轮收集</small><strong id="fruit-count">0 <em>/ 12</em></strong></div><div><small>合作篮子</small><strong id="fruit-basket">0</strong></div></div><canvas class="fruit-trails"></canvas><div class="fruit-cheer" role="status" aria-live="polite" hidden></div><div class="fruit-message" role="status" aria-live="polite"></div><div class="fruit-card"></div>';
   viewport.append(overlay);
   const canvas = overlay.querySelector('canvas'), ctx = canvas.getContext('2d');
   const cheerLabel = overlay.querySelector('.fruit-cheer');
   const countCard = overlay.querySelector('#fruit-count').parentElement;
   const card = overlay.querySelector('.fruit-card'), message = overlay.querySelector('.fruit-message');
   const toolbar = document.createElement('div'); toolbar.className = 'fruit-toolbar';
-  toolbar.innerHTML = '<label>互动模式 <select id="play-mode"><option value="free">自由体验</option><option value="fruit">切水果</option></select></label><button id="fruit-end" hidden>提前结束</button><button id="fruit-audio" hidden aria-pressed="true" aria-label="游戏音效">♫ 声音：开</button>';
+  toolbar.innerHTML = '<div class="mode-switch" role="group" aria-label="互动模式"><button type="button" data-play-mode="free" aria-pressed="true">自由模式</button><button type="button" data-play-mode="fruit" aria-pressed="false">切水果</button></div>';
   document.querySelector('.stage-top').prepend(toolbar);
   const setup = document.createElement('section'); setup.className = 'fruit-settings';
-  setup.innerHTML = '<h3>切水果 · 老师设置</h3><label>回合时长 <select id="fruit-duration"><option value="30">30 秒</option><option value="45">45 秒</option><option value="60" selected>60 秒</option></select></label><label>出果节奏 <select id="fruit-pace"><option value="slow">慢慢收集</option><option value="normal">轻快收集</option></select></label><label>可用手臂 <select id="fruit-hands"><option value="both">双手</option><option value="left">角色左手</option><option value="right">角色右手</option></select></label><label>输入方式 <select id="fruit-input"><option value="camera">摄像头体感</option><option value="mouse">老师演示 · 按住拖动</option></select></label><label><input type="checkbox" id="fruit-sound" checked> 划动与收集音效</label><p>仅限老师监督下的单人 Demo，尚无身份锁定。原地站好，肩、肘、腕入镜即可，无需露出腿部。</p><p>合作篮子只保存在本页内存，刷新后归零。</p><button id="fruit-clear">清空本堂合作篮子</button>';
+  setup.innerHTML = '<h3>切水果 · 老师设置</h3><label>回合时长 <select id="fruit-duration"><option value="30">30 秒</option><option value="45">45 秒</option><option value="60" selected>60 秒</option></select></label><label>出果节奏 <select id="fruit-pace"><option value="slow">慢慢收集</option><option value="normal">轻快收集</option></select></label><label>可用手臂 <select id="fruit-hands"><option value="both">双手</option><option value="left">角色左手</option><option value="right">角色右手</option></select></label><label>输入方式 <select id="fruit-input"><option value="camera">摄像头体感</option><option value="mouse">老师演示 · 按住拖动</option></select></label><label><input type="checkbox" id="fruit-sound" checked> 音乐与音效</label><p>仅限老师监督下的单人 Demo，尚无身份锁定。原地站好，肩、肘、腕入镜即可，无需露出腿部。</p><p>合作篮子只保存在本页内存，刷新后归零。</p><button id="fruit-clear">清空本堂合作篮子</button>';
   document.querySelector('.settings-content').append(setup);
   const $ = id => document.getElementById(id);
   function clearInput() { pendingSegments = []; Object.values(inputs).forEach(i => i.clear()); trails = []; points = []; pointerDown = false; pointer = null; }
@@ -52,14 +52,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
     cheer = null; celebration = null; cheerLabel.hidden = true;
     countCard.style.removeProperty('transform'); audio.stop();
   }
-  function setSound(value) {
-    $('fruit-sound').checked = value;
-    $('fruit-audio').setAttribute('aria-pressed', String(value));
-    $('fruit-audio').textContent = value ? '♫ 声音：开' : '♫ 声音：关';
-    audio.setEnabled(value);
-  }
-  $('fruit-audio').addEventListener('click', () => setSound(!$('fruit-sound').checked));
-  $('fruit-sound').addEventListener('change', e => setSound(e.target.checked));
+  $('fruit-sound').addEventListener('change', e => audio.setEnabled(e.target.checked));
   function prepare() {
     resetFeedback(); clearInput(); scale = null; calibration = []; lastPoseTime = -1; boundsDirty = true;
     game.prepare({ duration: Number($('fruit-duration').value), pace: $('fruit-pace').value, demo: $('fruit-input').value === 'mouse', autoStart: $('fruit-input').value !== 'mouse' });
@@ -67,23 +60,27 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
     paintUI();
   }
   function toggle(on) {
+    if (on === enabled) return;
+    toolbar.querySelectorAll('[data-play-mode]').forEach(button => {
+      button.setAttribute('aria-pressed', String((button.dataset.playMode === 'fruit') === on));
+    });
     enabled = on; overlay.hidden = !on; container.classList.toggle('fruit-active', on); document.querySelector('#app').classList.toggle('fruit-mode', on);
     clearInput();
-    if (on) { unlockAudio(); resetView(); controls.enableDamping = false; controls.update(); prepare(); }
+    if (on) { resetView(); controls.enableDamping = false; controls.update(); prepare(); }
     else { game.dispose(); resetFeedback(); controls.enableDamping = true; clearMeshes(); }
+    audio.setMusicActive(on && !document.hidden);
     renderer.shadowMap.enabled = on ? false : originalShadows;
     controls.enabled = !on;
     $('view-zoom').disabled = on; $('reset-view').disabled = on;
-    $('fruit-end').hidden = !on; $('fruit-audio').hidden = !on;
   }
-  $('play-mode').addEventListener('change', e => toggle(e.target.value === 'fruit'));
-  $('fruit-end').addEventListener('click', () => { game.end(); resetFeedback(); clearInput(); paintUI(); });
-  $('teacher').addEventListener('click', invalidateInput);
+  toolbar.querySelectorAll('[data-play-mode]').forEach(button => {
+    button.addEventListener('click', () => toggle(button.dataset.playMode === 'fruit'));
+  });
   $('fruit-clear').addEventListener('click', () => { basket.clear(); paintUI(); });
   for (const id of ['fruit-duration','fruit-pace','fruit-input']) $(id).addEventListener('change', () => { if (enabled && ['setup','calibrating','results'].includes(game.status)) prepare(); });
   setup.addEventListener('change', () => { clearInput(); });
   document.querySelector('.stage-top').addEventListener('click', e => { if (e.target.closest('.settings-button')) invalidateInput(); }, true);
-  for (const selector of ['#quick-career', '[data-camera-view]', '#camera-zoom', '#close-camera', '#camera-button']) document.querySelectorAll(selector).forEach(el => {
+  for (const selector of ['[data-camera-view]', '#camera-zoom', '#close-camera', '#camera-button']) document.querySelectorAll(selector).forEach(el => {
     el.addEventListener('pointerdown', invalidateInput, true);
     el.addEventListener('change', invalidateInput, true);
   });
@@ -95,19 +92,15 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
     $('fruit-count').textContent = `${game.collected} / ${FRUIT_CONFIG.target}`;
     $('fruit-basket').textContent = basket.total;
     const status = game.status;
-    const key = [status, game.stable >= 1, ready, game.tutorialDone, basket.total, basket.rounds.has(game.roundId), game.career].join('|');
+    const key = [status, state.camera, game.stable >= 1, ready, game.tutorialDone, basket.total, basket.rounds.has(game.roundId), game.career].join('|');
     if (key === uiKey) return; uiKey = key;
     const editable = ['calibrating','setup','results'].includes(status);
     for (const id of ['fruit-duration','fruit-pace','fruit-input']) $(id).disabled = !editable;
-    $('fruit-end').disabled = !['playing','countdown'].includes(status);
-    card.replaceChildren(); card.hidden = status === 'playing';
-    overlay.querySelector('.fruit-hint').textContent = game.demo ? '老师演示 · 按住鼠标或触屏拖动切水果 · 不加入合作篮子' : '水果持续掉落 · 想切就挥手 · 放下双手不会暂停';
+    card.replaceChildren(); card.hidden = status === 'playing' || (status === 'calibrating' && !game.demo);
+    overlay.classList.toggle('fruit-preparing', status === 'calibrating' && !game.demo);
     if (status === 'calibrating') {
-      message.textContent = game.demo ? '准备一场水果派对' : ready ? '举起双手，马上开始收集！' : '开启摄像头，举起双手开始切水果';
-      const p = document.createElement('p'); p.textContent = game.demo ? '按住并拖动，试着切开练习水果。' : '双手举过肩膀即可立即开始。开始后水果持续掉落，想切就挥手，放下双手也不会暂停。'; card.append(p);
-      if (!game.demo) action('开启摄像头', () => $('camera-button').click(), state.camera);
-      if (game.demo) action('准备好了，练习一下', () => game.tutorial(), game.stable < 1);
-      action(game.demo ? '使用摄像头体感' : '没有摄像头？老师演示', () => { $('fruit-input').value = game.demo ? 'camera' : 'mouse'; prepare(); });
+      message.textContent = game.demo ? '按住拖动，切开水果' : state.camera ? '举起双手，开始切水果' : '开启摄像头，举起双手开始';
+      if (game.demo) action('练习一下', () => game.tutorial(), game.stable < 1);
     } else if (status === 'tutorial') {
       message.textContent = game.tutorialDone ? '切到了！光线经过，水果就分开啦' : '挥挥手，让光线划过水果';
       action(game.tutorialDone ? '开始本轮 · 3 秒准备' : '跳过练习，开始本轮', () => game.start(), game.stable < 1);
@@ -118,7 +111,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
       const detail = document.createElement('p'); detail.textContent = FRUIT_TYPES.map(t => `${names[t]} ${game.counts[t]}`).join(' · '); card.append(detail);
       if (!game.demo) action(basket.rounds.has(game.roundId) ? '已加入合作篮子 ✓' : '加入合作篮子', () => basket.add(game), basket.rounds.has(game.roundId));
       action('再玩一次', prepare); action('下一位', () => { resetFace(); prepare(); });
-      action('返回自由体验', () => { $('play-mode').value = 'free'; toggle(false); });
+      action('返回自由模式', () => toggle(false));
     }
   }
   function clearMeshes() { for (const group of meshes.values()) world.remove(group); meshes.clear(); }
@@ -197,7 +190,10 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
     if (seg) pendingSegments.push(seg);
   });
   for (const type of ['pointerup','pointercancel','lostpointercapture']) viewport.addEventListener(type, () => { pointerDown = false; inputs.mouse.clear(); });
-  document.addEventListener('visibilitychange', () => { invalidateInput(); });
+  document.addEventListener('visibilitychange', () => {
+    invalidateInput(); audio.setMusicActive(enabled && !document.hidden);
+  });
+  window.addEventListener('pagehide', () => { audio.stop(); audio.setMusicActive(false); });
   new ResizeObserver(() => { invalidateInput(); scale = null; calibration = []; boundsDirty = true; game.fruits = []; game.effects = []; }).observe(viewport);
   setInterval(() => {
     if (!enabled || !document.hidden || game.status !== 'playing') return;
@@ -218,7 +214,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
         const indices = side === 'left' ? [12,14,16] : [11,13,15];
         return pose && nowMs-data.time < 180 && indices.every(i => pose[i] && pose[i].visibility >= .6) && [11,12].every(i => pose[i]?.visibility >= .6) && ($('fruit-hands').value === 'both' || $('fruit-hands').value === side);
       };
-      const ready = !document.querySelector('#experience-settings').open && !document.querySelector('#tips').open && (game.demo || Boolean(state.camera && (available('left') || available('right'))));
+      const ready = !document.querySelector('#experience-settings').open && (game.demo || Boolean(state.camera && (available('left') || available('right'))));
       if (!game.demo && ready && data.time !== lastPoseTime && !scale) {
         calibration.push(Math.hypot(pose[11].x-pose[12].x,pose[11].y-pose[12].y));
         if (calibration.length >= 10) scale = [...calibration].sort((a,b)=>a-b)[Math.floor(calibration.length/2)];
@@ -285,7 +281,6 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
       if (!running) audio.stop();
       paintUI(ready);
       if (game.status === 'countdown') { message.textContent = ready ? String(Math.max(1,Math.ceil(game.countdown))) : '等待肩膀和手臂入镜'; }
-      if (!game.demo && ready && (!available('left') || !available('right'))) overlay.querySelector('.fruit-hint').textContent = '单手可继续收集 · 另一只手暂不可用 · 原地轻轻挥手';
       if (game.status === 'playing') message.textContent = game.collected >= FRUIT_CONFIG.target ? '合作目标达成！还可以继续收集 ✨' : '';
       visuals(dt,running ? segments : [],now);
     },

@@ -1,6 +1,11 @@
 // Presentation only: effects never change input thresholds, collisions or scores.
 export const FEEDBACK_CONFIG = Object.freeze({ swipeCooldown: .14, hitCooldown: .045, cheerLife: 1.1, celebrationLife: 1.8, maxVoices: 24 });
 const encouragements = ['切得真准！', '又收集一个！', '漂亮的一挥！', '一起收集，真开心！'];
+const soundFiles = {
+  slash: new URL('./assets/audio/slash.mp3', import.meta.url).href,
+  tear: new URL('./assets/audio/tear.mp3', import.meta.url).href,
+  music: new URL('./assets/audio/fruit-music.mp3', import.meta.url).href,
+};
 export function encouragement(count, hits, goal) {
   if (goal) return '合作目标达成！大家一起真棒！';
   if (hits > 1) return `一挥收集 ${hits} 个！太棒啦！`;
@@ -8,17 +13,103 @@ export function encouragement(count, hits, goal) {
 }
 
 export class FruitAudio {
-  constructor() { this.context = null; this.voices = new Set(); this.enabled = true; this.lastSwipe = -Infinity; this.lastHit = -Infinity; }
+  constructor() { this.context = null; this.voices = new Set(); this.samples = new Map(); this.samplesLoading = null; this.enabled = true; this.musicRequested = false; this.music = null; this.lastSwipe = -Infinity; this.lastHit = -Infinity; }
   unlock() {
     if (!this.enabled) return;
     const Audio = window.AudioContext || window.webkitAudioContext;
     if (!Audio) return;
     try {
       this.context ??= new Audio();
-      this.context.resume()?.catch(() => {});
+      this.context.resume()?.then(() => this.syncMusic()).catch(() => {});
+      this.loadSamples();
     } catch { /* Visual feedback stays available when audio is unavailable. */ }
   }
-  setEnabled(value) { this.enabled = value; if (!value) this.stop(); else this.unlock(); }
+  loadSamples() {
+    if (!this.context || this.samplesLoading) return this.samplesLoading;
+    this.samplesLoading = Promise.all(Object.entries(soundFiles).map(async ([name, url]) => {
+      if (this.samples.has(name)) return;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Sound unavailable');
+        const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
+        let peak = 0;
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+          for (const value of buffer.getChannelData(channel)) peak = Math.max(peak, Math.abs(value));
+        }
+        if (!peak) return;
+        const scale = Math.min(3, .9 / peak);
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+          const data = buffer.getChannelData(channel);
+          for (let i = 0; i < data.length; i++) data[i] *= scale;
+        }
+        this.samples.set(name, buffer);
+        if (name === 'music') this.syncMusic();
+      } catch { /* Keep synthesis available; retry missing samples on the next unlock. */ }
+    })).finally(() => { this.samplesLoading = null; });
+    return this.samplesLoading;
+  }
+  getOutput() {
+    if (!this.output) {
+      const compressor = this.context.createDynamicsCompressor();
+      compressor.threshold.value = -12; compressor.knee.value = 12; compressor.ratio.value = 4;
+      compressor.attack.value = .003; compressor.release.value = .12;
+      compressor.connect(this.context.destination); this.output = compressor;
+    }
+    return this.output;
+  }
+  playSample(name, { volume = .25, rate = 1, offset = 0, duration = .25 } = {}) {
+    const ctx = this.context, buffer = this.samples.get(name);
+    if (!buffer) return false;
+    if (!this.enabled || !ctx || ctx.state !== 'running' || this.voices.size >= FEEDBACK_CONFIG.maxVoices) return true;
+    // Limit recorded transients separately so fast swipes cannot build a loud tail.
+    if ([...this.voices].filter(voice => voice.kind === name).length >= 2) return true;
+    const length = Math.min(duration, (buffer.duration - offset) / rate);
+    if (length <= .012) return false;
+    const start = ctx.currentTime, source = ctx.createBufferSource(), gain = ctx.createGain();
+    source.buffer = buffer; source.playbackRate.setValueAtTime(rate, start);
+    gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(volume, start + .003);
+    gain.gain.setValueAtTime(volume, start + length - .012); gain.gain.linearRampToValueAtTime(0, start + length);
+    source.connect(gain); gain.connect(this.getOutput());
+    const voice = { source, gain, kind: name }; this.voices.add(voice);
+    source.onended = () => { source.disconnect(); gain.disconnect(); this.voices.delete(voice); };
+    source.start(start, offset, length * rate); source.stop(start + length + .005);
+    return true;
+  }
+  setMusicActive(active) {
+    this.musicRequested = active;
+    if (active) this.unlock();
+    this.syncMusic();
+  }
+  syncMusic() {
+    if (!this.musicRequested || !this.enabled) { this.stopMusic(); return; }
+    const ctx = this.context, buffer = this.samples.get('music');
+    if (this.music || !buffer || !ctx || ctx.state !== 'running') return;
+    const source = ctx.createBufferSource(), gain = ctx.createGain(), start = ctx.currentTime;
+    source.buffer = buffer; source.loop = true;
+    gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(.12, start + .5);
+    source.connect(gain); gain.connect(this.getOutput());
+    const music = { source, gain }; this.music = music;
+    source.onended = () => {
+      source.disconnect(); gain.disconnect();
+      if (this.music === music) this.music = null;
+    };
+    source.start(start);
+  }
+  stopMusic(immediate = false) {
+    const music = this.music;
+    if (!music) return;
+    this.music = null;
+    const now = this.context.currentTime;
+    music.gain.gain.cancelScheduledValues(now);
+    music.gain.gain.setValueAtTime(music.gain.gain.value, now);
+    music.gain.gain.linearRampToValueAtTime(0, now + (immediate ? 0 : .2));
+    music.source.stop(now + (immediate ? 0 : .2));
+  }
+  setEnabled(value) {
+    this.enabled = value;
+    if (!value) { this.stop(); this.stopMusic(true); }
+    else { this.unlock(); this.syncMusic(); }
+  }
   stop() {
     for (const voice of this.voices) { try { voice.source.stop(); } catch { /* Already ended. */ } voice.source.disconnect(); voice.gain.disconnect(); voice.filter?.disconnect(); }
     this.voices.clear(); this.lastSwipe = -Infinity; this.lastHit = -Infinity;
@@ -46,23 +137,27 @@ export class FruitAudio {
     }
     gain.gain.setValueAtTime(.001, start); gain.gain.linearRampToValueAtTime(volume, start + .004);
     gain.gain.exponentialRampToValueAtTime(.001, start + duration);
-    gain.connect(ctx.destination);
+    gain.connect(this.getOutput());
     const voice = { source, gain, filter }; this.voices.add(voice);
     source.onended = () => { source.disconnect(); gain.disconnect(); filter?.disconnect(); this.voices.delete(voice); };
     source.start(start); source.stop(start + duration + .01);
   }
   swipe(now) {
     if (now - this.lastSwipe < FEEDBACK_CONFIG.swipeCooldown) return;
-    this.lastSwipe = now; this.play({ noise: true, duration: .11, volume: .075, filterStart: 3400, filterEnd: 850 });
+    this.lastSwipe = now;
+    if (!this.playSample('slash', { volume: .22, rate: 1.1, offset: .055, duration: .24 })) {
+      this.play({ noise: true, duration: .11, volume: .075, filterStart: 3400, filterEnd: 850 });
+    }
   }
   hit(now, count, goal = false, fruit = 'apple') {
     if (now - this.lastHit < FEEDBACK_CONFIG.hitCooldown) return;
     this.lastHit = now;
     const pitch = { apple: 1.1, orange: 1, watermelon: .7, strawberry: 1.35 }[fruit] || 1;
     // Crack -> wet splat -> small droplets, all scheduled from this hit's audio time.
-    this.play({ noise: true, duration: .065, volume: .15, filterStart: 3900 * pitch, filterEnd: 1300 * pitch });
-    this.play({ noise: true, duration: .23, volume: .19, delay: .012, filterStart: 1000 * pitch, filterEnd: 180 * pitch, filterQ: 1.6 });
-    this.play({ frequency: 260 * pitch, endFrequency: 65 * pitch, duration: .12, volume: .095 });
+    const recorded = this.playSample('tear', { volume: .28, rate: pitch, offset: .04, duration: .24 / pitch });
+    if (!recorded) this.play({ noise: true, duration: .065, volume: .15, filterStart: 3900 * pitch, filterEnd: 1300 * pitch });
+    this.play({ noise: true, duration: recorded ? .16 : .23, volume: recorded ? .1 : .19, delay: .012, filterStart: 1000 * pitch, filterEnd: 180 * pitch, filterQ: 1.6 });
+    this.play({ frequency: 260 * pitch, endFrequency: 65 * pitch, duration: .12, volume: recorded ? .06 : .095 });
     for (let i = 0; i < 3; i++) this.play({ frequency: (720 + i * 170) * pitch, endFrequency: (260 + i * 60) * pitch, duration: .055, volume: .026, delay: .06 + i * .038 });
     const notes = goal ? [523.25, 659.25, 783.99, 1046.5] : count > 1 ? [783.99, 1046.5] : [];
     notes.forEach((frequency, i) => this.play({ frequency, duration: .18, volume: .028, delay: .1 + i * .055, type: 'triangle' }));

@@ -1,7 +1,9 @@
 html, body, #app { width: 100%; height: 100%; min-width: 0; min-height: 0; }
 body { overflow: hidden; }
 #app { height: 100dvh; display: flex; flex-direction: column; }
-.header { height: 56px; flex: 0 0 56px; margin: 0 24px; }
+.header { height: 56px; flex: 0 0 56px; margin: 0 24px; gap: 12px; }
+.header .camera-launch { margin-left: auto; flex-shrink: 0; padding: 9px 14px; font-size: 11px; }
+.header .camera-launch[aria-pressed="true"] { background: #477768; border-color: #477768; }
 main { width: 100%; max-width: none; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 24px 0; }
 .intro { flex: 0 0 auto; margin-bottom: 12px; }
 h1, .intro h1 { font-size: 24px; margin: 3px 0 7px; line-height: 1.4; }
@@ -43,12 +45,6 @@ h1, .intro h1 { font-size: 24px; margin: 3px 0 7px; line-height: 1.4; }
 .pause { padding: 7px 11px; }
 .interaction-status { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px 16px; padding: 8px 16px; background: #fcfafee0; color: #9c8bad; font-size: 10px; line-height: 1.4; border-top: 1px solid #e6dfee; }
 #live-task { color: #8a76a3; }
-.camera-bar { flex-shrink: 0; display: flex; flex-wrap: nowrap; gap: 14px; padding: 10px 16px; margin-top: 10px; }
-.camera-copy { flex: 1; min-width: 0; }
-.camera-copy strong { font-size: 12px; }
-.camera-copy p { max-width: none; font-size: 10px; margin-top: 4px; line-height: 1.5; }
-.camera-bar > .primary { width: auto; margin-left: auto; padding: 10px 16px; }
-.privacy { margin-left: auto; }
 footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
 #experience-settings { width: min(780px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 22px; }
 #experience-settings[open] { display: flex; flex-direction: column; gap: 16px; }
@@ -91,8 +87,6 @@ footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
   .intro h1 { font-size: 19px; margin: 2px 0; }
   .intro p, .session-tag { display: none; }
   .stage-top { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
-  .camera-bar { padding: 7px 12px; margin-top: 7px; }
-  .camera-copy p { display: none; }
   .interaction-status { padding-top: 5px; padding-bottom: 5px; }
   .motion-bar { min-height: 40px; padding: 5px 8px; }
   .motion { padding: 6px 10px; }
@@ -106,8 +100,6 @@ footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
   .intro h1 { font-size: 21px; }
   h1 span { display: inline; }
   .intro p { font-size: 10px; }
-  .camera-copy strong { font-size: 11px; }
-  .camera-copy p { font-size: 9px; }
   .motion { font-size: 10px; padding: 7px 9px; }
   .scene-caption { left: 12px; }
   .scene-caption strong { font-size: 12px; }
@@ -115,6 +107,8 @@ footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
 }
 @media (max-width: 600px) {
   .header { height: 44px; flex-basis: 44px; margin: 0 12px; }
+  .header .camera-launch { padding: 7px 10px; font-size: 10px; gap: 6px; }
+  .header .camera-launch svg { width: 15px; height: 15px; }
   .brand { font-size: 15px; }
   .brand-icon { font-size: 25px; }
   .brand-sub { font-size: 7px; }
@@ -145,11 +139,6 @@ footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
   .motion { font-size: 9px; padding: 6px 7px; }
   .pause { font-size: 10px; padding: 5px 7px; }
   .interaction-status { padding: 5px 8px; font-size: 8px; }
-  .camera-bar { padding: 8px; margin-top: 8px; gap: 6px; }
-  .camera-icon { display: none; }
-  .camera-copy strong { font-size: 10px; }
-  .camera-copy p { display: none; }
-  .camera-bar > .primary { font-size: 10px; padding: 9px; gap: 5px; }
   footer { padding: 6px 0; font-size: 8px; }
   footer > span:last-child { display: none; }
   #experience-settings { padding: 14px; }
@@ -163,7 +152,6 @@ footer { flex-shrink: 0; padding: 8px 0; line-height: 1.5; }
 
 .is-interacting .intro,
 .is-interacting .motion-bar,
-.is-interacting .camera-bar,
 .is-interacting footer {
   display: none;
 }
@@ -271,6 +259,24 @@ main { padding-bottom: 12px; }
   .settings-content .camera-fit-options button { font-size: 10px; padding: 6px; }
 }
 
+/* Keep career choices beside the full-width stage. */
+.workspace { gap: 12px; }
+.career-panel { flex: 0 0 205px; width: 205px; min-height: 0; max-height: 100%; padding: 14px 10px; overflow-y: auto; border-radius: 14px; }
+.career-panel .panel-title { padding: 0 4px; }
+.career-panel .filters { flex-wrap: wrap; padding: 10px 0 8px; }
+.career-panel .filter { padding: 6px 8px; }
+.career-panel .career-card { min-height: 46px; padding: 5px 6px; gap: 8px; }
+.career-panel .career-icon { width: 30px; height: 30px; font-size: 21px; }
+.career-panel .career-card strong { font-size: 11px; }
+.career-panel .career-card small { font-size: 7px; }
+.settings-content { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .workspace { overflow: auto; flex-direction: column; gap: 8px; }
+  .career-panel { flex: 0 0 auto; width: 100%; max-height: 200px; }
+  .career-panel #career-list { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+  .career-panel .career-card { margin: 0; }
+  .stage-panel { flex: 0 0 52dvh; min-height: 340px; }
+}
 /* Extend each career's scenery palette through the stage frame. */
 .stage-panel { background: var(--stage-background, #e8e3f3); transition: background-color .35s; }
 .stage-panel .location, .stage-panel .scene-caption > span,

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>切水果摄像头状态回归检查</title></head>
+<body>
+<h1>切水果摄像头状态回归检查</h1>
+<p>使用模拟姿态，不访问摄像头。</p>
+<pre id="results">正在检查…</pre>
+<div id="app"><div class="stage-top"></div><div id="viewport" style="position:relative;width:600px;height:450px"></div></div>
+<dialog id="experience-settings"><div class="settings-content"></div></dialog>
+<input id="view-zoom"><button id="reset-view">复位</button><p id="tracking-label"></p>
+<script type="module">
+import * as THREE from 'three';
+import { createFruitStage } from '../../src/fruit-stage.js';
+const results = document.querySelector('#results'), passed = [];
+const check = (condition, text) => { if (!condition) throw new Error(text); };
+try {
+  const viewport = document.querySelector('#viewport');
+  const camera = new THREE.PerspectiveCamera(40, 600 / 450, .1, 100);
+  camera.position.set(0, 1.5, 6); camera.lookAt(0, 1.5, 0); camera.updateMatrixWorld();
+  const limbs = Object.fromEntries(['left','right'].map((side, index) => {
+    const shoulder = new THREE.Object3D(), wrist = new THREE.Object3D();
+    shoulder.position.set(index ? .4 : -.4, 1.5, 0); wrist.position.set(index ? .8 : -.8, 1, 0);
+    shoulder.updateMatrixWorld(); wrist.updateMatrixWorld(); return [side, { shoulder, wrist }];
+  }));
+  let renders = 0, skeletonFrames = 0, pose = null, now = 1000;
+  const renderer = { shadowMap: { enabled: true }, autoClear: true, clearDepth() {}, render() { renders++; } };
+  const stage = createFruitStage({ viewport, container: viewport, renderer, camera, limbs,
+    controls: { enabled: true, enableDamping: true, update() {} },
+    state: { camera: true, career: { name: '测试职业' } },
+    getPose: () => ({ pose, time: now }), resetFace() {}, resetView() {},
+  });
+  const sound = document.querySelector('#fruit-sound'); sound.checked = false; sound.dispatchEvent(new Event('change'));
+  const mode = value => document.querySelector(`[data-play-mode="${value}"]`).click();
+  const makePose = (left, right, raised = false) => Array.from({ length: 33 }, (_, i) => ({
+    x: i % 2 ? .4 : .6, y: [15,16].includes(i) ? (raised ? .2 : .7) : .4,
+    visibility: [11,12].includes(i) || (left && [14,16].includes(i)) || (right && [13,15].includes(i)) ? 1 : 0,
+  }));
+  // Let the initial ResizeObserver run before advancing deterministic frames.
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  mode('fruit');
+  const run = (name, input) => {
+    pose = input;
+    const before = renders;
+    for (let i = 0; i < 5; i++) {
+      now += 70;
+      stage.frame(now);
+      // This models the next skeleton update in the shared animation loop.
+      skeletonFrames++;
+    }
+    check(renders === before + 5, `${name}: 渲染未持续`);
+    check(renderer.autoClear === true, `${name}: 渲染状态未恢复`);
+    passed.push(name);
+  };
+  run('尚未识别到人物', null);
+  run('双手入镜', makePose(true, true));
+  run('只有左手入镜', makePose(true, false));
+  run('只有右手入镜', makePose(false, true));
+  run('双手举起开局', makePose(true, true, true));
+  run('游戏中丢失一只手', makePose(true, false));
+  run('游戏中跟踪丢失', null);
+  run('跟踪恢复', makePose(true, true));
+  mode('free'); mode('fruit');
+  run('重新进入切水果且只有单手入镜', makePose(false, true));
+  check(skeletonFrames === 45, '共用循环更新次数错误');
+  check(!document.querySelector('.fruit-hint'), '已移除的提示条不应恢复');
+  results.textContent = `PASS ${passed.length} 个场景，45 帧持续更新\n` + passed.join('\n');
+  document.title = 'PASS · 切水果摄像头状态回归检查';
+} catch (error) {
+  results.textContent = `FAIL\n${error.stack}`;
+  document.title = 'FAIL · 切水果摄像头状态回归检查';
+  console.error(error);
+}
+</script>
+</body>
+</html>
