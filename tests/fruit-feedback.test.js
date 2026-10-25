@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FruitAudio, FEEDBACK_CONFIG, fruitHalfPose } from '../src/fruit-feedback.js';
+import { FruitAudio, StrokeSoundGate, FEEDBACK_CONFIG, fruitHalfPose } from '../src/fruit-feedback.js';
 
 function fakeContext() {
   const nodes = [];
@@ -12,46 +12,48 @@ function fakeContext() {
     createBuffer: () => ({ sampleRate:100, getChannelData: () => new Float32Array(20) }),
   };
 }
-test('rapid swipes are throttled; muting stops scheduled voices and blocks further sounds', () => {
-  const sound = new FruitAudio(); sound.context = fakeContext();
-  sound.swipe(1); const voices = [...sound.voices]; assert.equal(voices.length,1);
-  sound.swipe(1.02); assert.equal(sound.voices.size,1);
-  sound.hit(1,1); assert.ok(sound.voices.size>1);
-  const all = [...sound.voices]; sound.setEnabled(false);
-  assert.equal(sound.voices.size,0); assert.ok(all.every(v => v.source.stopped && v.source.disconnected && v.gain.disconnected));
-  sound.hit(2,3); sound.swipe(2); assert.equal(sound.voices.size,0);
+const stroke = (hand = 'left', direction = 1) => ({ hand, a: { x: 0, y: 0 }, b: { x: direction * .1, y: 0 } });
+
+test('one continuous action sounds once, rearming only after a reversal or pause', () => {
+  const gate = new StrokeSoundGate();
+  let sounds = 0;
+  for (let i = 0; i < 60; i++) if (gate.update([stroke()], 1 + i / 60)) sounds++;
+  assert.equal(sounds, 1);
+  assert.ok(gate.update([stroke('left', -1)], 2));
+  assert.equal(gate.update([stroke('left', -1)], 2.05), false);
+  assert.equal(gate.update([], 2.1), false);
+  assert.ok(gate.update([stroke('left', -1)], 2.4));
+  gate.clear(); assert.ok(gate.update([stroke()], 3));
 });
 
-test('recorded sounds replace the synthetic slash and crack, with bounded overlap and mute cleanup', () => {
+test('two hands in the same action frame produce one sound and no stationary sounds', () => {
+  const gate = new StrokeSoundGate();
+  assert.equal(gate.update([], 0), false);
+  assert.equal(gate.update([{ a: {x: 0, y: 0}, b: {x: 0, y: 0} }], .1), false);
+  assert.ok(gate.update([stroke('left'), stroke('right', -1)], 1));
+  for (let i = 1; i < 20; i++) assert.equal(gate.update([stroke('left'), stroke('right', -1)], 1 + i / 60), false);
+});
+
+test('each action plays a single short cut without extra hit layers; mute stops it', () => {
   const sound = new FruitAudio(); sound.context = fakeContext();
-  const slash = { duration: .55 }, tear = { duration: 1.05 };
-  sound.samples.set('slash', slash); sound.samples.set('tear', tear);
+  const cut = { duration: .13 }; sound.samples.set('cut', cut);
   const calls = []; sound.play = options => calls.push(options);
-  sound.swipe(1); sound.swipe(1.2); sound.swipe(1.4);
-  assert.equal(sound.voices.size, 2);
-  assert.equal(calls.length, 0);
-  assert.ok([...sound.voices].every(v => v.source.buffer === slash));
-  sound.hit(2, 1, false, 'watermelon');
-  const hit = [...sound.voices].find(v => v.kind === 'tear');
-  assert.equal(hit.source.buffer, tear);
-  assert.equal(hit.source.started[0], sound.context.currentTime);
-  assert.equal(hit.source.started[1], .04);
-  assert.ok(Math.abs(hit.source.started[2] - .24) < .0001);
-  assert.equal(calls.filter(c => c.noise).length, 1);
-  assert.ok(calls.some(c => c.filterQ === 1.6));
-  assert.equal(sound.output.threshold.value, -12);
-  const voices = [...sound.voices]; sound.setEnabled(false);
-  assert.equal(sound.voices.size, 0);
-  assert.ok(voices.every(v => v.source.stopped && v.source.disconnected));
-  sound.swipe(3); sound.hit(3, 1); assert.equal(sound.voices.size, 0);
+  for (let i = 0; i < 20; i++) sound.swipe(1 + i / 60, [stroke()]);
+  assert.equal(sound.voices.size, 1); assert.equal(calls.length, 0);
+  const voice = [...sound.voices][0];
+  assert.equal(voice.source.buffer, cut);
+  assert.deepEqual(voice.source.started, [0, 0, .13]);
+  sound.setEnabled(false);
+  assert.equal(sound.voices.size, 0); assert.ok(voice.source.stopped && voice.source.disconnected);
+  sound.swipe(2, [stroke()]); assert.equal(sound.voices.size, 0);
 });
 
 test('sample loading caches decoded files and retries failures without blocking synthesis', async () => {
   const originalFetch = globalThis.fetch;
-  let requests = 0, failTear = true;
+  let requests = 0, failCut = true;
   globalThis.fetch = async url => {
     requests++;
-    return { ok: !(url.endsWith('/tear.mp3') && failTear), arrayBuffer: async () => new ArrayBuffer(1) };
+    return { ok: !(url.endsWith('/cut.mp3') && failCut), arrayBuffer: async () => new ArrayBuffer(1) };
   };
   try {
     const sound = new FruitAudio(); sound.context = fakeContext();
@@ -60,12 +62,12 @@ test('sample loading caches decoded files and retries failures without blocking 
       return { duration: 1, numberOfChannels: 1, getChannelData: () => data };
     };
     await sound.loadSamples();
+    assert.equal(requests, 2); assert.equal(sound.samples.size, 1);
+    assert.ok(Math.abs(sound.samples.get('music').getChannelData(0)[1] + .9) < .001);
+    sound.swipe(1, [stroke()]); assert.ok(sound.voices.size > 0);
+    failCut = false; await sound.loadSamples();
     assert.equal(requests, 3); assert.equal(sound.samples.size, 2);
-    assert.ok(Math.abs(sound.samples.get('slash').getChannelData(0)[1] + .9) < .001);
-    sound.hit(1, 1); assert.ok(sound.voices.size > 0);
-    failTear = false; await sound.loadSamples();
-    assert.equal(requests, 4); assert.equal(sound.samples.size, 3);
-    await sound.loadSamples(); assert.equal(requests, 4);
+    await sound.loadSamples(); assert.equal(requests, 3);
     sound.stop();
   } finally { globalThis.fetch = originalFetch; }
 });
@@ -79,18 +81,6 @@ test('sound concurrency is bounded and ended voices release their resources', ()
   sound.stop(); assert.equal(sound.voices.size,0);
 });
 
-test('a hit layers a crack, wet splat and droplets; fruit types vary pitch', () => {
-  const sound=new FruitAudio(), calls=[];
-  sound.play=options=>calls.push(options);
-  sound.hit(1,1,false,'watermelon');
-  assert.equal(calls.filter(c=>c.noise).length,2);
-  assert.ok(calls.some(c=>c.filterQ===1.6));
-  const low=calls.find(c=>!c.noise).frequency;
-  calls.length=0; sound.hit(2,1,false,'strawberry');
-  assert.ok(calls.find(c=>!c.noise).frequency>low);
-  calls.length=0; sound.hit(2.01,1); assert.equal(calls.length,0);
-  sound.hit(3,3,true); assert.ok(calls.some(c=>c.type==='triangle'));
-});
 test('cut halves separate perpendicular to a swipe with exposed initial gap', () => {
   const f={x:.5,y:.5,radius:.065,dx:1,dy:0,age:0};
   const left=fruitHalfPose(f,-1), right=fruitHalfPose(f,1);
@@ -111,7 +101,7 @@ test('background music loops independently of effects and follows mode and mute 
   assert.ok(first.source.loop); assert.equal(first.source.buffer.duration, 30);
   assert.deepEqual(first.source.started, [0]);
   sound.setMusicActive(true); assert.equal(sound.music, first);
-  sound.swipe(1); sound.stop();
+  sound.swipe(1, [stroke()]); sound.stop();
   assert.equal(sound.music, first); assert.ok(!first.source.stopped);
   sound.setEnabled(false); assert.equal(sound.music, null); assert.ok(first.source.stopped);
   sound.setEnabled(true); const resumed = sound.music; assert.ok(resumed);

@@ -1,9 +1,8 @@
 // Presentation only: effects never change input thresholds, collisions or scores.
-export const FEEDBACK_CONFIG = Object.freeze({ swipeCooldown: .14, hitCooldown: .045, cheerLife: 1.1, celebrationLife: 1.8, maxVoices: 24 });
+export const FEEDBACK_CONFIG = Object.freeze({ swipeCooldown: .12, strokeIdle: .18, cheerLife: 1.1, celebrationLife: 1.8, maxVoices: 24 });
 const encouragements = ['切得真准！', '又收集一个！', '漂亮的一挥！', '一起收集，真开心！'];
 const soundFiles = {
-  slash: new URL('./assets/audio/slash.mp3', import.meta.url).href,
-  tear: new URL('./assets/audio/tear.mp3', import.meta.url).href,
+  cut: new URL('./assets/audio/cut.mp3', import.meta.url).href,
   music: new URL('./assets/audio/fruit-music.mp3', import.meta.url).href,
 };
 export function encouragement(count, hits, goal) {
@@ -12,8 +11,30 @@ export function encouragement(count, hits, goal) {
   return encouragements[Math.max(0, count - 1) % encouragements.length];
 }
 
+// One sound per directional stroke, rather than one sound per input frame.
+export class StrokeSoundGate {
+  constructor() { this.clear(); }
+  clear() { this.hands = new Map(); this.lastSound = -Infinity; }
+  update(segments, now) {
+    let started = false;
+    for (const segment of segments) {
+      const x = segment.b.x - segment.a.x, y = segment.b.y - segment.a.y;
+      const length = Math.hypot(x, y);
+      if (!Number.isFinite(length) || length < .00001) continue;
+      const hand = segment.hand || 'mouse', previous = this.hands.get(hand);
+      const dx = x / length, dy = y / length;
+      const nextStroke = !previous || now - previous.time > FEEDBACK_CONFIG.strokeIdle || dx * previous.dx + dy * previous.dy < -.35;
+      this.hands.set(hand, { time: now, dx: nextStroke ? dx : previous.dx, dy: nextStroke ? dy : previous.dy });
+      if (nextStroke) started = true;
+    }
+    if (!started || now - this.lastSound < FEEDBACK_CONFIG.swipeCooldown) return false;
+    this.lastSound = now;
+    return true;
+  }
+}
+
 export class FruitAudio {
-  constructor() { this.context = null; this.voices = new Set(); this.samples = new Map(); this.samplesLoading = null; this.enabled = true; this.musicRequested = false; this.music = null; this.lastSwipe = -Infinity; this.lastHit = -Infinity; }
+  constructor() { this.context = null; this.voices = new Set(); this.samples = new Map(); this.samplesLoading = null; this.enabled = true; this.musicRequested = false; this.music = null; this.strokeSounds = new StrokeSoundGate(); }
   unlock() {
     if (!this.enabled) return;
     const Audio = window.AudioContext || window.webkitAudioContext;
@@ -76,6 +97,7 @@ export class FruitAudio {
     return true;
   }
   setMusicActive(active) {
+    if (active === this.musicRequested) return;
     this.musicRequested = active;
     if (active) this.unlock();
     this.syncMusic();
@@ -112,7 +134,7 @@ export class FruitAudio {
   }
   stop() {
     for (const voice of this.voices) { try { voice.source.stop(); } catch { /* Already ended. */ } voice.source.disconnect(); voice.gain.disconnect(); voice.filter?.disconnect(); }
-    this.voices.clear(); this.lastSwipe = -Infinity; this.lastHit = -Infinity;
+    this.voices.clear(); this.strokeSounds.clear();
   }
   play({ frequency = 660, endFrequency = frequency, duration = .16, volume = .035, delay = 0, noise = false, type = 'sine', filterStart = 1800, filterEnd = 500, filterQ = .7 }) {
     const ctx = this.context;
@@ -142,26 +164,13 @@ export class FruitAudio {
     source.onended = () => { source.disconnect(); gain.disconnect(); filter?.disconnect(); this.voices.delete(voice); };
     source.start(start); source.stop(start + duration + .01);
   }
-  swipe(now) {
-    if (now - this.lastSwipe < FEEDBACK_CONFIG.swipeCooldown) return;
-    this.lastSwipe = now;
-    if (!this.playSample('slash', { volume: .22, rate: 1.1, offset: .055, duration: .24 })) {
-      this.play({ noise: true, duration: .11, volume: .075, filterStart: 3400, filterEnd: 850 });
+  swipe(now, segments = []) {
+    if (!this.enabled || !this.strokeSounds.update(segments, now)) return;
+    if (!this.playSample('cut', { volume: .22, duration: .13 })) {
+      this.play({ noise: true, duration: .08, volume: .075, filterStart: 3400, filterEnd: 850 });
     }
   }
-  hit(now, count, goal = false, fruit = 'apple') {
-    if (now - this.lastHit < FEEDBACK_CONFIG.hitCooldown) return;
-    this.lastHit = now;
-    const pitch = { apple: 1.1, orange: 1, watermelon: .7, strawberry: 1.35 }[fruit] || 1;
-    // Crack -> wet splat -> small droplets, all scheduled from this hit's audio time.
-    const recorded = this.playSample('tear', { volume: .28, rate: pitch, offset: .04, duration: .24 / pitch });
-    if (!recorded) this.play({ noise: true, duration: .065, volume: .15, filterStart: 3900 * pitch, filterEnd: 1300 * pitch });
-    this.play({ noise: true, duration: recorded ? .16 : .23, volume: recorded ? .1 : .19, delay: .012, filterStart: 1000 * pitch, filterEnd: 180 * pitch, filterQ: 1.6 });
-    this.play({ frequency: 260 * pitch, endFrequency: 65 * pitch, duration: .12, volume: recorded ? .06 : .095 });
-    for (let i = 0; i < 3; i++) this.play({ frequency: (720 + i * 170) * pitch, endFrequency: (260 + i * 60) * pitch, duration: .055, volume: .026, delay: .06 + i * .038 });
-    const notes = goal ? [523.25, 659.25, 783.99, 1046.5] : count > 1 ? [783.99, 1046.5] : [];
-    notes.forEach((frequency, i) => this.play({ frequency, duration: .18, volume: .028, delay: .1 + i * .055, type: 'triangle' }));
-  }
+
 }
 
 export function fruitHalfPose(fruit, side, reducedMotion = false) {

@@ -24,7 +24,9 @@ try {
   }));
   let renders = 0, skeletonFrames = 0, pose = null, now = 1000;
   const renderer = { shadowMap: { enabled: true }, autoClear: true, clearDepth() {}, render() { renders++; } };
-  const stage = createFruitStage({ viewport, container: viewport, renderer, camera, limbs,
+  let musicActive = false;
+  const audio = { unlock() {}, stop() {}, setEnabled() {}, swipe() {}, setMusicActive(value) { musicActive = value; } };
+  const stage = createFruitStage({ audio, viewport, container: viewport, renderer, camera, limbs,
     controls: { enabled: true, enableDamping: true, update() {} },
     state: { camera: true, career: { name: '测试职业' } },
     getPose: () => ({ pose, time: now }), resetFace() {}, resetView() {},
@@ -38,6 +40,7 @@ try {
   // Let the initial ResizeObserver run before advancing deterministic frames.
   await new Promise(resolve => requestAnimationFrame(resolve));
   mode('fruit');
+  check(!musicActive, '进入模式不应立即播放背景音乐');
   const run = (name, input) => {
     pose = input;
     const before = renders;
@@ -55,11 +58,18 @@ try {
   run('双手入镜', makePose(true, true));
   run('只有左手入镜', makePose(true, false));
   run('只有右手入镜', makePose(false, true));
+  check(!musicActive, '举手开局之前不应播放背景音乐');
   run('双手举起开局', makePose(true, true, true));
+  check(musicActive, '举手出水果之后应播放背景音乐');
   run('游戏中丢失一只手', makePose(true, false));
   run('游戏中跟踪丢失', null);
   run('跟踪恢复', makePose(true, true));
-  mode('free'); mode('fruit');
+  check(musicActive, '跟踪中断不应重启或停止回合音乐');
+  now += 61000; pose = null; stage.frame(now);
+  check(!musicActive, '回合结束应停止背景音乐');
+  passed.push('回合结束停止背景音乐');
+  mode('free'); check(!musicActive, '退出回合应停止背景音乐');
+  mode('fruit'); check(!musicActive, '重新进入后必须等待举手开局');
   run('重新进入切水果且只有单手入镜', makePose(false, true));
   check(skeletonFrames === 45, '共用循环更新次数错误');
   check(!document.querySelector('.fruit-hint'), '已移除的提示条不应恢复');

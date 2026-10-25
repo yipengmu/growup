@@ -6,12 +6,11 @@ import { FruitAudio, FEEDBACK_CONFIG, encouragement, drawSwipe, drawBurst, drawC
 const colors = { apple: '#ee696d', orange: '#f5a63c', watermelon: '#65aa7a', strawberry: '#de5178' };
 const juiceColors = { apple: '#e9ad45', orange: '#f5a032', watermelon: '#ef4c6f', strawberry: '#de5178' };
 const names = { apple: '苹果', orange: '橙子', watermelon: '西瓜', strawberry: '草莓' };
-export function createFruitStage({ viewport, container, renderer, camera, controls, limbs, state, getPose, resetFace, resetView }) {
+export function createFruitStage({ viewport, container, renderer, camera, controls, limbs, state, getPose, resetFace, resetView, audio = new FruitAudio() }) {
   const game = new FruitGame(), basket = new CooperationBasket();
   const inputs = { left: new HandInput(), right: new HandInput(), mouse: new HandInput() };
   let pendingSegments = [];
   let enabled = false, scale = null, calibration = [], lastNow = null, lastPoseTime = -1, pointer = null, pointerDown = false, trails = [], points = [], boundsDirty = true;
-  const audio = new FruitAudio();
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let cheer = null, celebration = null, lastFeedbackTime = 0;
   const world = new THREE.Scene();
@@ -48,6 +47,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
   function clearInput() { pendingSegments = []; Object.values(inputs).forEach(i => i.clear()); trails = []; points = []; pointerDown = false; pointer = null; }
   function invalidateInput() { if (!enabled) return; clearInput(); audio.stop(); }
   function unlockAudio() { audio.unlock(); }
+  function syncMusic() { audio.setMusicActive(enabled && game.status === 'playing' && !document.hidden); }
   function resetFeedback() {
     cheer = null; celebration = null; cheerLabel.hidden = true;
     countCard.style.removeProperty('transform'); audio.stop();
@@ -57,6 +57,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
     resetFeedback(); clearInput(); scale = null; calibration = []; lastPoseTime = -1; boundsDirty = true;
     game.prepare({ duration: Number($('fruit-duration').value), pace: $('fruit-pace').value, demo: $('fruit-input').value === 'mouse', autoStart: $('fruit-input').value !== 'mouse' });
     game.career = state.career.name;
+    syncMusic();
     paintUI();
   }
   function toggle(on) {
@@ -66,9 +67,9 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
     });
     enabled = on; overlay.hidden = !on; container.classList.toggle('fruit-active', on); document.querySelector('#app').classList.toggle('fruit-mode', on);
     clearInput();
-    if (on) { resetView(); controls.enableDamping = false; controls.update(); prepare(); }
+    if (on) { unlockAudio(); resetView(); controls.enableDamping = false; controls.update(); prepare(); }
     else { game.dispose(); resetFeedback(); controls.enableDamping = true; clearMeshes(); }
-    audio.setMusicActive(on && !document.hidden);
+    syncMusic();
     renderer.shadowMap.enabled = on ? false : originalShadows;
     controls.enabled = !on;
     $('view-zoom').disabled = on; $('reset-view').disabled = on;
@@ -191,7 +192,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
   });
   for (const type of ['pointerup','pointercancel','lostpointercapture']) viewport.addEventListener(type, () => { pointerDown = false; inputs.mouse.clear(); });
   document.addEventListener('visibilitychange', () => {
-    invalidateInput(); audio.setMusicActive(enabled && !document.hidden);
+    invalidateInput(); syncMusic();
   });
   window.addEventListener('pagehide', () => { audio.stop(); audio.setMusicActive(false); });
   new ResizeObserver(() => { invalidateInput(); scale = null; calibration = []; boundsDirty = true; game.fruits = []; game.effects = []; }).observe(viewport);
@@ -200,6 +201,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
     const now = performance.now() / 1000;
     game.update(lastNow === null ? 0 : now - lastNow, false);
     lastNow = now;
+    syncMusic();
     paintUI(false);
   }, 250);
   return {
@@ -240,7 +242,7 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
           const wrist = side === 'left' ? 16 : 15;
           const raw = valid ? { x: pose[wrist].x-(pose[11].x+pose[12].x)/2, y: pose[wrist].y-(pose[11].y+pose[12].y)/2 } : null;
           const seg = inputs[side].sample(point,raw,now,scale,active && valid);
-          if (seg) segments.push(seg);
+          if (seg) segments.push({ ...seg, hand: side });
         }
       }
       // Conservative stage region around projected shoulders, not the webpage or video bounds.
@@ -254,13 +256,13 @@ export function createFruitStage({ viewport, container, renderer, camera, contro
       const count = game.collected;
       const previousEffects = new Set(game.effects.map(effect => effect.id));
       game.update(dt,ready,segments, !game.demo && ready && handsRaised(pose));
+      syncMusic();
       const running = ['playing','tutorial'].includes(game.status);
       if (running) {
-        if (segments.length) audio.swipe(now);
+        audio.swipe(now, segments);
         const hits = game.effects.filter(effect => !previousEffects.has(effect.id));
         if (hits.length) {
           const goal = count < FRUIT_CONFIG.target && game.collected >= FRUIT_CONFIG.target;
-          audio.hit(now,hits.length,goal,hits[0].type);
           cheer = { age: 0, text: game.status === 'tutorial' ? '切到了！就是这样挥挥手 ✨' : encouragement(game.collected,hits.length,goal) };
           if (goal) celebration = { age: 0 };
           lastFeedbackTime = game.time;
